@@ -8,3 +8,7 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+The configurator is intentionally client-side only: keep engineering lookup data and Zustand state in browser-safe modules, because this frontend prototype must not require a backend.
+The 3D railway visualizer is lazy-loaded from the index route so server-side rendering never needs to initialize WebGL.
+Foundation and FBM values are indicative estimates, not certified RDSO drawing selections; preserve the visible verification notice until approved source tables are supplied.
