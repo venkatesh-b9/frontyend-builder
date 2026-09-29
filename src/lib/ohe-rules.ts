@@ -39,7 +39,7 @@ export function calculate(config: Config) {
   const windBand = wind <= 75 ? 'Light' : wind <= 112.5 ? 'Medium' : wind <= 155 ? 'Heavy' : 'Severe';
   const mast = category === 'portal' ? `${portalType}-Type portal` : category === 'ttc' ? 'Two-track cantilever' : wind >= 178 || implantation > 3.8 ? 'K-225 fabricated mast' : wind >= 136 || role === 'OLA/BWA' ? 'K-175 fabricated mast' : 'K-125 fabricated mast';
   const codeIndex = Math.min(fbmCodes.length - 1, Math.floor((wind - 73) / 30) + Math.floor((implantation - 2.8) / 0.45) + (alignment !== 'tangent' ? 1 : 0) + (role === 'OLA/BWA' ? 2 : 0) + (category === 'portal' ? 5 : category === 'ttc' ? 2 : 0));
-  const fbm = fbmCodes[Math.max(0, codeIndex)];
+  const fbm = fbmCodes[Math.max(0, codeIndex)] ?? 135;
   const number = Math.min(13, Math.max(1, Math.ceil((fbm - 100) / 25)));
   const foundation = category === 'portal' ? `P-${Math.min(18, number + 2)}` : soil === 'hard' ? `HB-${String(Math.min(11, number)).padStart(2, '0')}` : soil === 'loose' ? `BG-${String(Math.min(14, number)).padStart(2, '0')}` : soil === 'dry-cotton' ? `NBC-${100 + Math.min(52, number * 4)}` : soil === 'wet-cotton' ? `WBC-${Math.min(33, 19 + number)}` : `B-${String(number).padStart(2, '0')}`;
   const a = category === 'portal' ? 1.9 : soil === 'loose' ? 1.5 : 1.2;
@@ -47,7 +47,7 @@ export function calculate(config: Config) {
   const h = category === 'portal' ? 2.5 : soil === 'loose' ? 2.3 : 2.1;
   const baseVolume = a * b * h;
   const muffVolume = role === 'OLA/BWA' ? 0.08 : 0.02;
-  const portal = portalTypes.find(p => p.value === portalType) ?? portalTypes[0];
+  const portal = portalTypes.find(p => p.value === portalType) ?? { value: 'N', label: 'N-Type', maxTracks: 4, minSpan: 10, maxSpan: 20.4 };
   const portalValid = category !== 'portal' || (tracks <= portal.maxTracks && portalSpan >= portal.minSpan && portalSpan <= portal.maxSpan);
   const settingValid = implantation >= minSetting;
   return { versine, minSetting, implantationBand, windBand, mast, fbm, foundation, a, b, h, baseVolume, muffVolume, totalVolume: baseVolume + muffVolume, reverseDeflection: role === 'OLA/BWA' ? -30 : 30, portalValid, settingValid, soilCapacity: soils.find(s => s.value === soil)?.capacity ?? 11000 };

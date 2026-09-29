@@ -8,12 +8,13 @@ type View = 'iso' | 'front' | 'side';
 function CameraPreset({ view }: { view: View }) {
   const { camera, controls } = useThree();
   useEffect(() => {
-    camera.position.set(...(view === 'front' ? [0, 6, 16] : view === 'side' ? [16, 6, 0] : [13, 9, 14]));
+    const position = view === 'front' ? [0, 6, 16] : view === 'side' ? [16, 6, 0] : [13, 9, 14];
+    camera.position.set(position[0], position[1], position[2]);
     camera.lookAt(0, 3.5, 0);
     camera.updateProjectionMatrix();
-    if (controls && 'target' in controls) {
-      (controls as { target: THREE.Vector3; update: () => void }).target.set(0, 3.5, 0);
-      (controls as { target: THREE.Vector3; update: () => void }).update();
+    if (controls && 'target' in controls && controls.target instanceof THREE.Vector3) {
+      controls.target.set(0, 3.5, 0);
+      if ('update' in controls && typeof controls.update === 'function') controls.update();
     }
   }, [camera, controls, view]);
   return null;
