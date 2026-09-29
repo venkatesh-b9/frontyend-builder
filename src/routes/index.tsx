@@ -1,95 +1,1416 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { Suspense, lazy, useMemo, useState } from 'react';
-import { Activity, ArrowDownToLine, Box, Check, ChevronDown, ChevronLeft, ChevronRight, CircleHelp, Clipboard, Compass, Copy, Crosshair, Gauge, Layers3, Maximize2, Menu, RotateCcw, Ruler, Settings2, ShieldCheck, SlidersHorizontal, TrainFront, TriangleAlert, Wind } from 'lucide-react';
+import {
+  Activity,
+  AlertOctagon,
+  AlertTriangle,
+  ArrowDownToLine,
+  Box,
+  Check,
+  CheckCircle2,
+  CircleDot,
+  Compass,
+  Copy,
+  Crosshair,
+  Eye,
+  FileSpreadsheet,
+  Gauge,
+  HelpCircle,
+  Layers,
+  Layers3,
+  Maximize2,
+  Menu,
+  RotateCcw,
+  Ruler,
+  ShieldAlert,
+  ShieldCheck,
+  SlidersHorizontal,
+  Sparkles,
+  TrainFront,
+  Wind,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { calculate, portalTypes, roles, soils, spans, windZones, type Alignment, type Category, type Config, type Role, type Soil } from '@/lib/ohe-rules';
+import { Badge } from '@/components/ui/badge';
+import {
+  calculateOhe,
+  roles,
+  spans,
+  windZones,
+  type Alignment,
+  type Role,
+} from '@/lib/ohe-rules';
 import { useOheStore } from '@/lib/ohe-store';
+import type { SceneView } from '@/components/ohe-scene';
 
 const OheScene = lazy(() => import('@/components/ohe-scene'));
-type View = 'iso' | 'front' | 'side';
 
 export const Route = createFileRoute('/')({
-  head: () => ({ meta: [
-    { title: 'RDSO OHE Mast & Foundation Configurator | Engineering Workspace' },
-    { name: 'description', content: 'Explore overhead electrification mast, track geometry, and foundation configurations in an interactive engineering workspace.' },
-    { property: 'og:title', content: 'RDSO OHE Mast & Foundation Configurator' },
-    { property: 'og:description', content: 'Interactive client-side workspace for overhead electrification mast and foundation configurations.' },
-    { property: 'og:type', content: 'website' },
-    { name: 'twitter:card', content: 'summary_large_image' },
-  ] }),
-  component: Configurator,
+  head: () => ({
+    meta: [
+      { title: 'RDSO OHE Mast & Foundation Configurator | Engineering Workspace' },
+      {
+        name: 'description',
+        content:
+          'Precision Indian Railways RDSO OHE mast selection, dynamic implantation, Cess Step Level (C), Super Block volumes, and multi-soil foundation matrix.',
+      },
+    ],
+  }),
+  component: ConfiguratorPage,
 });
 
-function Label({ children, hint }: { children: React.ReactNode; hint?: string }) {
-  return <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase text-muted-foreground">{children}{hint && <Tooltip><TooltipTrigger asChild><CircleHelp className="size-3.5 cursor-help" /></TooltipTrigger><TooltipContent>{hint}</TooltipContent></Tooltip>}</div>;
-}
-function SectionTitle({ index, title, icon: Icon }: { index: string; title: string; icon: typeof Box }) {
-  return <div className="mb-4 flex items-center gap-2.5"><span className="font-mono text-[10px] text-primary">{index}</span><Icon className="size-4 text-muted-foreground" /><h3 className="text-xs font-bold uppercase text-foreground">{title}</h3></div>;
-}
-function Metric({ label, value, sub, icon: Icon, highlight = false }: { label: string; value: string; sub: string; icon: typeof Box; highlight?: boolean }) {
-  return <div className="min-w-0 border-r border-b border-border p-4 last:border-r-0 md:p-5"><div className="mb-4 flex items-center justify-between gap-2"><span className="text-[10px] font-bold uppercase text-muted-foreground">{label}</span><Icon className={`size-4 ${highlight ? 'text-signal' : 'text-primary'}`} /></div><div className={`truncate font-display text-[25px] font-semibold leading-none ${highlight ? 'text-signal' : 'text-foreground'}`} title={value}>{value}</div><div className="mt-2 truncate font-mono text-[10px] text-muted-foreground" title={sub}>{sub}</div></div>;
-}
-function Configurator() {
-  const state = useOheStore();
-  const { set, reset, ...config } = state;
-  const result = useMemo(() => calculate(config), [config.category, config.wind, config.implantation, config.alignment, config.radius, config.span, config.role, config.soil, config.tracks, config.portalSpan, config.portalType]);
-  const [view, setView] = useState<View>('iso');
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState<'specifications'|'reference'>('specifications');
-  const portal = portalTypes.find(p => p.value === config.portalType) ?? { value: 'N', label: 'N-Type', maxTracks: 4, minSpan: 10, maxSpan: 20.4 };
-  const specText = `RDSO OHE MAST & FOUNDATION CONFIGURATION\nStructure: ${result.mast}\nRole: ${config.role}\nWind: ${config.wind} kgf/m² (${result.windBand})\nAlignment: ${config.alignment}${config.alignment !== 'tangent' ? `, radius ${config.radius} m, versine ${result.versine.toFixed(1)} mm` : ''}\nSpan: ${config.span} m\nImplantation: ${config.implantation.toFixed(2)} m\nSoil: ${soils.find(s => s.value === config.soil)?.label}\nIndicative FBM: ${result.fbm}\nIndicative foundation: ${result.foundation}\nFoundation envelope: ${result.a.toFixed(2)} × ${result.b.toFixed(2)} × ${result.h.toFixed(2)} m\nEstimated concrete: ${result.totalVolume.toFixed(2)} m³\n\nPRELIMINARY CONFIGURATION ONLY — verify against current approved RDSO drawings and site calculations.`;
-  const copy = async () => { try { await navigator.clipboard.writeText(specText); setCopied(true); window.setTimeout(() => setCopied(false), 2200); } catch { setCopied(false); } };
-  const rows = [
-    { parameter: 'Wind pressure', value: `${config.wind} kgf/m²`, reference: 'Wind-zone input', limit: `${result.windBand} zone`, good: true },
-    { parameter: 'Implantation', value: `${config.implantation.toFixed(2)} m`, reference: 'Setting distance', limit: `≥ ${result.minSetting.toFixed(2)} m`, good: result.settingValid },
-    { parameter: 'Track span', value: `${config.span.toFixed(1)} m`, reference: 'Span input', limit: '22.5–72 m', good: true },
-    { parameter: 'Curve radius', value: config.alignment === 'tangent' ? 'Straight track' : `${config.radius} m`, reference: 'Alignment input', limit: config.alignment === 'tangent' ? '—' : '200–3500 m', good: true },
-    { parameter: 'Versine', value: `${result.versine.toFixed(1)} mm`, reference: 'S² / 8R × 1000', limit: 'Calculated', good: true },
-    { parameter: 'Soil bearing capacity', value: `${result.soilCapacity.toLocaleString()} kg/m²`, reference: 'Soil category', limit: 'Site test required', good: true },
-    ...(config.category === 'portal' ? [{ parameter: 'Portal envelope', value: `${config.tracks} tracks / ${config.portalSpan.toFixed(1)} m`, reference: `${config.portalType}-Type range`, limit: `${portal.minSpan}–${portal.maxSpan} m / ≤ ${portal.maxTracks} tracks`, good: result.portalValid }] : []),
-    { parameter: 'Reverse deflection', value: `${result.reverseDeflection > 0 ? '+' : ''}${result.reverseDeflection} mm`, reference: 'Role allowance', limit: 'Verify on site', good: true },
-  ];
-  return <TooltipProvider delayDuration={200}><div className="min-h-screen bg-background">
-    <header className="no-print relative z-20 flex h-[68px] items-center justify-between border-b border-border bg-panel-deep px-4 lg:px-7">
-      <div className="flex min-w-0 items-center gap-3"><div className="flex size-9 shrink-0 items-center justify-center rounded bg-primary text-primary-foreground"><TrainFront className="size-5" /></div><div className="min-w-0"><div className="truncate font-display text-[19px] font-semibold uppercase leading-none sm:text-[22px]">RDSO <span className="text-signal">OHE</span> <span className="hidden sm:inline">Configurator</span></div><div className="mt-1.5 hidden font-mono text-[9px] uppercase text-muted-foreground sm:block">Mast & foundation engineering workspace</div></div><div className="ml-2 hidden h-7 w-px bg-border xl:block" /><span className="hidden rounded-sm border border-border px-2 py-1 font-mono text-[9px] text-muted-foreground xl:block">DESIGN TOOL / V1.0</span></div>
-      <div className="flex items-center gap-2"><span className="mr-3 hidden items-center gap-2 font-mono text-[10px] text-muted-foreground lg:flex"><span className="size-1.5 rounded-full bg-success" /> LOCAL SESSION</span><Button variant="outline" size="sm" onClick={reset} className="hidden border-border bg-panel text-muted-foreground hover:text-foreground sm:inline-flex"><RotateCcw /> Reset</Button><Button size="sm" onClick={() => window.print()} className="hidden sm:inline-flex"><ArrowDownToLine /> Export sheet</Button><Button variant="outline" size="icon" className="border-border bg-panel lg:hidden" onClick={() => setMobileOpen(!mobileOpen)} aria-label="Toggle controls"><Menu /></Button></div>
-    </header>
-    <main className="no-print flex min-h-[calc(100vh-68px)] flex-col lg:h-[calc(100vh-68px)] lg:flex-row lg:overflow-hidden">
-      <aside className={`${mobileOpen ? 'block' : 'hidden'} ${collapsed ? 'lg:w-[58px]' : 'lg:w-[40%] xl:w-[38%]'} shrink-0 border-b border-border bg-panel lg:block lg:overflow-y-auto lg:border-b-0 lg:border-r` }>
-        {collapsed ? <div className="hidden flex-col items-center gap-4 py-5 lg:flex"><Button variant="ghost" size="icon" onClick={() => setCollapsed(false)} title="Expand controls"><ChevronRight /></Button><SlidersHorizontal className="size-4 text-primary" /></div> : <>
-          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-panel px-5 py-4 md:px-7"><div><div className="flex items-center gap-2 text-xs font-bold uppercase"><SlidersHorizontal className="size-4 text-primary" /> Control center</div><div className="mt-1 font-mono text-[10px] text-muted-foreground">CONFIGURATION PARAMETERS</div></div><Button variant="ghost" size="icon" className="hidden lg:inline-flex" onClick={() => setCollapsed(true)} title="Collapse controls"><ChevronLeft /></Button></div>
-          <div className="space-y-0 pb-8">
-            <section className="border-b border-border px-5 py-5 md:px-7"><SectionTitle index="01" title="Structure category" icon={Layers3} /><div className="grid grid-cols-3 gap-1 rounded bg-panel-deep p-1">{([['single','Single mast'],['ttc','TTC'],['portal','Portal']] as const).map(([value,label]) => <Button key={value} variant={config.category === value ? 'default' : 'ghost'} size="sm" className={`h-9 min-w-0 px-1 text-[11px] ${config.category !== value ? 'text-muted-foreground' : ''}`} onClick={() => set('category',value)}>{label}</Button>)}</div><p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">{config.category === 'single' ? 'Individual support mast with cantilever assembly.' : config.category === 'ttc' ? 'One upright serving a two-track cantilever arrangement.' : 'Cross-track portal structure with paired uprights.'}</p></section>
-            <section className="border-b border-border px-5 py-5 md:px-7"><SectionTitle index="02" title="Environmental loads" icon={Wind} /><div className="grid grid-cols-2 gap-4"><div><Label>Wind pressure</Label><Select value={String(config.wind)} onValueChange={v => set('wind', Number(v))}><SelectTrigger className="mt-2 h-10 border-border bg-panel-deep"><SelectValue /></SelectTrigger><SelectContent>{windZones.map(n => <SelectItem key={n} value={String(n)}>{n} kgf/m²</SelectItem>)}</SelectContent></Select></div><div><Label>Soil condition</Label><Select value={config.soil} onValueChange={v => set('soil', v as Soil)}><SelectTrigger className="mt-2 h-10 border-border bg-panel-deep"><SelectValue /></SelectTrigger><SelectContent>{soils.map(s => <SelectItem key={s.value} value={s.value}>{s.label} · {s.capacity.toLocaleString()} kg/m²</SelectItem>)}</SelectContent></Select></div></div><div className="mt-3 flex items-center gap-2 font-mono text-[10px] text-muted-foreground"><span className="size-1.5 rounded-full bg-signal" /> {result.windBand.toUpperCase()} WIND ZONE <span className="ml-auto">{result.soilCapacity.toLocaleString()} kg/m² SBC</span></div></section>
-            <section className="border-b border-border px-5 py-5 md:px-7"><SectionTitle index="03" title="Track geometry" icon={Ruler} /><div className="flex items-center justify-between"><Label hint="Horizontal distance between track centre and mast face">Implantation / setting distance</Label><span className="font-mono text-sm font-semibold text-signal">{config.implantation.toFixed(2)} <span className="text-[10px]">m</span></span></div><Slider aria-label="Implantation distance" className="mt-5" min={2.8} max={4.85} step={.05} value={[config.implantation]} onValueChange={v => set('implantation', v[0] ?? 2.8)} /><div className="mt-3 flex items-center justify-between font-mono text-[10px] text-muted-foreground"><span>2.80 m</span><span className="rounded-sm bg-signal-soft px-2 py-1 text-signal">{result.implantationBand}</span><span>4.85 m</span></div>
-              <div className="mt-6"><Label>Track alignment</Label><div className="mt-2 grid grid-cols-3 gap-1 rounded bg-panel-deep p-1">{([['tangent','Tangent'],['inside','Inside curve'],['outside','Outside curve']] as const).map(([value,label]) => <Button key={value} size="sm" variant={config.alignment === value ? 'secondary' : 'ghost'} className={`min-w-0 px-1 text-[10px] ${config.alignment !== value ? 'text-muted-foreground' : ''}`} onClick={() => set('alignment',value as Alignment)}>{label}</Button>)}</div></div>
-              {config.alignment !== 'tangent' && <div className="mt-5"><div className="flex justify-between"><Label>Curve radius</Label><span className="font-mono text-xs text-foreground">{config.radius} m</span></div><Slider aria-label="Curve radius" className="mt-4" min={200} max={3500} step={50} value={[config.radius]} onValueChange={v => set('radius',v[0] ?? 3500)} /><div className="mt-3 flex justify-between font-mono text-[10px] text-muted-foreground"><span>200 m</span><span>VERSINE {result.versine.toFixed(1)} mm</span><span>3500 m</span></div></div>}
-              <div className="mt-6"><Label>OHE span</Label><Select value={String(config.span)} onValueChange={v => set('span', Number(v))}><SelectTrigger className="mt-2 h-10 border-border bg-panel-deep"><SelectValue /></SelectTrigger><SelectContent>{spans.map(s => <SelectItem key={s} value={String(s)}>{s.toFixed(1)} m span</SelectItem>)}</SelectContent></Select></div>
-              {config.category === 'portal' && <div className="mt-6 space-y-5 border-t border-border pt-5"><div><Label>Portal type</Label><Select value={config.portalType} onValueChange={v => { set('portalType',v); const p = portalTypes.find(p => p.value === v); if (p) { set('tracks', Math.min(config.tracks,p.maxTracks)); set('portalSpan', Math.max(p.minSpan,Math.min(config.portalSpan,p.maxSpan))); } }}><SelectTrigger className="mt-2 h-10 border-border bg-panel-deep"><SelectValue /></SelectTrigger><SelectContent>{portalTypes.map(p => <SelectItem key={p.value} value={p.value}>{p.label} · up to {p.maxTracks} tracks</SelectItem>)}</SelectContent></Select></div><div className="flex items-center gap-4"><div className="flex-1"><Label>Number of tracks</Label><Select value={String(config.tracks)} onValueChange={v => set('tracks',Number(v))}><SelectTrigger className="mt-2 border-border bg-panel-deep"><SelectValue /></SelectTrigger><SelectContent>{Array.from({length:7},(_,i)=>i+2).map(n=><SelectItem key={n} value={String(n)}>{n} tracks</SelectItem>)}</SelectContent></Select></div><div className="flex-1"><Label>Portal span</Label><span className="mt-2 block font-mono text-sm text-signal">{config.portalSpan.toFixed(1)} m</span></div></div><Slider aria-label="Portal span" min={10} max={36} step={.1} value={[config.portalSpan]} onValueChange={v => set('portalSpan',v[0] ?? 20)} /></div>}
-            </section>
-            <section className="px-5 py-5 md:px-7"><SectionTitle index="04" title="Mast function" icon={Settings2} /><div className="grid grid-cols-2 gap-2">{roles.map(role => <Button key={role.value} variant="outline" onClick={() => set('role',role.value as Role)} className={`h-auto min-h-[60px] flex-col items-start gap-1 whitespace-normal border px-3 py-2 text-left ${config.role === role.value ? 'border-primary bg-primary/10 text-foreground' : 'border-border bg-panel-deep text-muted-foreground hover:border-input'}`}><span className="flex w-full items-center justify-between text-xs font-bold">{role.label}{config.role === role.value && <Check className="size-3.5 text-primary" />}</span><span className="text-[10px] font-normal opacity-75">{role.detail}</span></Button>)}</div></section>
-          </div>
-        </>}
-      </aside>
-      <div className="flex min-w-0 flex-1 flex-col lg:overflow-y-auto">
-        <section className="relative flex h-[480px] shrink-0 flex-col overflow-hidden border-b border-border bg-panel-deep lg:h-[min(55vh,680px)] lg:min-h-[480px]"><div className="pointer-events-none absolute inset-0 technical-grid opacity-30" />
-          <div className="relative z-10 flex flex-wrap items-center justify-between gap-2 border-b border-border/80 bg-panel-deep/85 px-4 py-3 md:px-6"><div className="flex items-center gap-3"><div className="flex size-8 items-center justify-center rounded border border-primary/40 bg-primary/15"><Box className="size-4 text-primary" /></div><div><h2 className="text-xs font-bold uppercase">Interactive structure view</h2><p className="font-mono text-[9px] text-muted-foreground">PROCEDURAL MODEL <span className="mx-1">/</span> {result.mast.toUpperCase()}</p></div></div><div className="flex items-center gap-1 rounded border border-border bg-panel p-1">{([['front','Front'],['side','Side'],['iso','3D view']] as const).map(([v,label]) => <Button key={v} size="sm" variant={view === v ? 'secondary' : 'ghost'} onClick={() => setView(v)} className={`h-7 px-2 text-[10px] ${view !== v ? 'text-muted-foreground' : ''}`}>{label}</Button>)}</div></div>
-          <div className="relative min-h-0 flex-1"><Suspense fallback={<div className="flex h-full min-h-[360px] items-center justify-center font-mono text-xs text-muted-foreground">Loading structure view…</div>}><OheScene config={config as Config} view={view} /></Suspense><div className="pointer-events-none absolute bottom-4 left-4 flex items-center gap-2 rounded border border-border bg-panel-deep/90 px-3 py-2 font-mono text-[10px] text-foreground"><Crosshair className="size-3.5 text-signal" /> IMPLANTATION <span className="text-signal">{config.implantation.toFixed(2)} m</span></div><div className="pointer-events-none absolute bottom-4 right-4 hidden rounded border border-border bg-panel-deep/85 px-3 py-2 font-mono text-[9px] text-muted-foreground sm:block">DRAG TO ORBIT · SCROLL TO ZOOM</div></div>
-        </section>
-        <section className="bg-background"><div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-4 md:px-6"><div><div className="flex items-center gap-2"><Activity className="size-4 text-signal" /><h2 className="font-display text-xl font-semibold uppercase leading-none">Engineering output</h2><span className="rounded-sm border border-signal/30 bg-signal-soft px-2 py-1 font-mono text-[9px] text-signal">PRELIMINARY</span></div><p className="mt-1.5 font-mono text-[10px] text-muted-foreground">CONFIGURATION SUMMARY / LIVE CALCULATION</p></div><div className="flex gap-2"><Button variant="outline" size="sm" className="border-border bg-panel" onClick={copy}>{copied ? <Check /> : <Copy />}{copied ? 'Copied' : 'Copy spec'}</Button><Button size="sm" className="sm:hidden" onClick={() => window.print()}><ArrowDownToLine /></Button></div></div>
-          <div className="grid grid-cols-2 border-b border-border bg-panel-deep md:grid-cols-4"><Metric label="Selected structure" value={result.mast} sub={config.role + ' / ' + result.windBand + ' wind'} icon={Layers3} /><Metric label="Foundation code" value={result.foundation} sub={`INDICATIVE · FBM ${result.fbm}`} icon={Box} highlight /><Metric label="Foundation envelope" value={`${result.a.toFixed(1)} × ${result.b.toFixed(1)} × ${result.h.toFixed(1)}`} sub="L × W × D / METRES" icon={Maximize2} /><Metric label="Concrete estimate" value={`${result.totalVolume.toFixed(2)} m³`} sub={`${result.baseVolume.toFixed(2)} BASE + ${result.muffVolume.toFixed(2)} MUFF`} icon={Gauge} /></div>
-          {(!result.settingValid || !result.portalValid) && <div className="flex items-start gap-2 border-b border-signal/30 bg-signal-soft px-5 py-3 text-xs text-signal"><TriangleAlert className="mt-0.5 size-4 shrink-0" /><span>{!result.settingValid ? `Setting distance is below the ${result.minSetting.toFixed(2)} m indicative minimum for this alignment. ` : ''}{!result.portalValid ? `Selected ${portal.label} supports ${portal.minSpan}–${portal.maxSpan} m and up to ${portal.maxTracks} tracks.` : ''}</span></div>}
-          <div className="flex gap-6 border-b border-border px-5 md:px-6"><Button variant="ghost" className={`h-11 rounded-none border-b-2 px-0 text-xs ${activeTab === 'specifications' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground'}`} onClick={() => setActiveTab('specifications')}>Specifications</Button><Button variant="ghost" className={`h-11 rounded-none border-b-2 px-0 text-xs ${activeTab === 'reference' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground'}`} onClick={() => setActiveTab('reference')}>Calculation notes</Button></div>
-          {activeTab === 'specifications' ? <div className="overflow-x-auto"><table className="w-full min-w-[620px] text-left text-[11px]"><thead className="bg-panel-deep font-mono text-[9px] uppercase text-muted-foreground"><tr>{['Parameter','Computed value','Basis / reference','Range / note','Check'].map(h => <th className="px-5 py-3 font-medium md:px-6" key={h}>{h}</th>)}</tr></thead><tbody>{rows.map((r,i) => <tr key={r.parameter} className={`border-t border-border ${i%2 ? 'bg-panel-deep/50' : ''}`}><td className="px-5 py-3 font-medium md:px-6">{r.parameter}</td><td className="px-5 py-3 font-mono text-foreground md:px-6">{r.value}</td><td className="px-5 py-3 text-muted-foreground md:px-6">{r.reference}</td><td className="px-5 py-3 text-muted-foreground md:px-6">{r.limit}</td><td className="px-5 py-3 md:px-6"><span className={`rounded-sm px-2 py-1 font-mono text-[9px] ${r.good ? 'bg-success/10 text-success' : 'bg-signal-soft text-signal'}`}>{r.good ? 'IN RANGE' : 'REVIEW'}</span></td></tr>)}</tbody></table></div> : <div className="grid gap-4 p-5 text-xs text-muted-foreground md:grid-cols-2 md:p-6"><div className="border-l-2 border-primary pl-4"><div className="mb-1 font-semibold text-foreground">Curve geometry</div>Versine = span² ÷ (8 × radius) × 1000 = <span className="font-mono text-foreground">{result.versine.toFixed(1)} mm</span></div><div className="border-l-2 border-signal pl-4"><div className="mb-1 font-semibold text-foreground">Volume estimate</div>Block envelope ({result.a} × {result.b} × {result.h}) + muff ({result.muffVolume.toFixed(2)} m³) = <span className="font-mono text-foreground">{result.totalVolume.toFixed(2)} m³</span></div><div className="border-l-2 border-border pl-4"><div className="mb-1 font-semibold text-foreground">Reverse deflection</div><span className="font-mono text-foreground">{result.reverseDeflection > 0 ? '+' : ''}{result.reverseDeflection} mm</span> · positive away from track</div><div className="border-l-2 border-border pl-4"><div className="mb-1 font-semibold text-foreground">Foundation selection</div>Indicative mapping from wind, implantation, alignment, structure and soil. Not a certified drawing lookup.</div></div>}
-          <div className="flex items-start gap-2 border-t border-border px-5 py-4 text-[11px] leading-relaxed text-muted-foreground md:px-6"><ShieldCheck className="mt-0.5 size-4 shrink-0 text-signal" /><p><strong className="text-foreground">Engineering review required.</strong> Foundation codes and dimensions shown here are indicative frontend estimates, not verified RDSO schedule selections. Confirm current approved drawings, loading, soil tests and site conditions before construction.</p></div>
-        </section>
+function StepHeader({
+  number,
+  title,
+  subtitle,
+  completed,
+  active,
+}: {
+  number: string;
+  title: string;
+  subtitle?: string;
+  completed: boolean;
+  active: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between border-b border-border/80 bg-panel px-5 py-3">
+      <div className="flex items-center gap-2.5">
+        <div
+          className={`flex size-6 items-center justify-center rounded-full font-mono text-[11px] font-bold transition-colors ${
+            completed
+              ? 'bg-success text-success-foreground'
+              : active
+              ? 'bg-primary text-primary-foreground'
+              : 'border border-border bg-panel-deep text-muted-foreground'
+          }`}
+        >
+          {completed ? <Check className="size-3.5 stroke-[3]" /> : number}
+        </div>
+        <div>
+          <h3 className="text-xs font-bold uppercase tracking-wide text-foreground">{title}</h3>
+          {subtitle && <p className="font-mono text-[9px] text-muted-foreground">{subtitle}</p>}
+        </div>
       </div>
-    </main>
-    <div className="print-sheet hidden"><h1>RDSO OHE Mast & Foundation — Preliminary Configuration Sheet</h1><p>Engineering review required: indicative output, not a certified RDSO drawing lookup.</p><pre className="mt-8 whitespace-pre-wrap font-mono text-sm leading-loose">{specText}</pre></div>
-  </div></TooltipProvider>;
+      {completed ? (
+        <Badge variant="outline" className="border-success/30 bg-success/10 font-mono text-[9px] text-success">
+          SET
+        </Badge>
+      ) : active ? (
+        <Badge variant="outline" className="border-primary/40 bg-primary/10 font-mono text-[9px] text-primary">
+          ACTIVE
+        </Badge>
+      ) : (
+        <Badge variant="outline" className="border-border bg-muted/30 font-mono text-[9px] text-muted-foreground">
+          LOCKED
+        </Badge>
+      )}
+    </div>
+  );
+}
+
+function ConfiguratorPage() {
+  const state = useOheStore();
+  const {
+    wind,
+    implantationMode,
+    implantation,
+    stepLevel,
+    alignment,
+    radius,
+    span,
+    role,
+    setWind,
+    setImplantationMode,
+    setImplantation,
+    setStepLevel,
+    setAlignment,
+    setRadius,
+    setSpan,
+    setRole,
+    reset,
+    loadPreset,
+  } = state;
+
+  const [sceneView, setSceneView] = useState<SceneView>('iso');
+  const [wireframe, setWireframe] = useState<boolean>(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
+  const [copied, setCopied] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<'matrix' | 'specifications' | 'rdso-notes'>('matrix');
+
+  // Sequential validation checks
+  const step1Done = wind !== null;
+  const step2Done = step1Done && implantation !== null;
+  const step3Done = step2Done && alignment !== null;
+  const step4Done = step3Done && role !== null;
+  const allStepsComplete = step1Done && step2Done && step3Done && step4Done;
+
+  const result = useMemo(
+    () =>
+      calculateOhe({
+        wind,
+        implantationMode,
+        implantation,
+        stepLevel,
+        alignment,
+        radius,
+        span,
+        role,
+      }),
+    [wind, implantationMode, implantation, stepLevel, alignment, radius, span, role]
+  );
+
+  const copyTechnicalSummary = async () => {
+    const text = `RDSO OHE MAST & FOUNDATION SPECIFICATION
+=========================================
+1. LOAD & GEOMETRY PARAMETERS:
+- Wind Pressure: ${wind ?? 'N/A'} kgf/m²
+- Implantation (Setting Distance): ${(implantation ?? 3.0).toFixed(2)} m (${result.tierDescription})
+- Cess Step Level Difference (C): ${result.superBlock.stepC.toFixed(2)} m (${result.superBlock.status})
+${result.superBlock.required ? `- Super Block Height (H_sb): ${result.superBlock.height.toFixed(2)} m (ACTM Vol-II requirement)` : '- Super Block: Not Required (C ≤ 0.50 m standard step)'}
+- Track Alignment: ${alignment ?? 'N/A'} ${alignment !== 'tangent' ? `(Radius: ${radius} m, Span: ${span} m, Versine: ${result.versine} mm)` : ''}
+- Mast Function: ${role ?? 'N/A'}
+
+2. MAST SIZING & DEFLECTION:
+- Section: ${result.mastSection}
+- Total Length: ${result.mastLengthTotal.toFixed(2)} m (${result.mastLengthAbove.toFixed(2)} m above foundation, ${result.mastLengthEmbedded.toFixed(2)} m embedded in foundation)
+${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.superBlock.height.toFixed(2)} m (Total below RL = ${result.superBlock.mastBelowRL.toFixed(2)} m)` : `- Mast Length Below RL: ${result.superBlock.mastBelowRL.toFixed(2)} m`}
+- Reverse Deflection: ${result.deflectionDirection}
+- Foundation Bending Moment (FBM) Code: ${result.fbmCode}
+
+3. MULTI-SOIL FOUNDATION MATRIX (RDSO Volume Chart):
+- B-Type (Normal Soil 11,000 kgf/m²):
+  Ref: ${result.foundations.bType.reference} | Dim: ${result.foundations.bType.dimText}
+  Base: ${result.foundations.bType.baseVolume.toFixed(2)} m³ | Muff: ${result.foundations.bType.muffVolume.toFixed(2)} m³ | Super Block: ${result.foundations.bType.superBlockVolume.toFixed(2)} m³ | Total: ${result.foundations.bType.totalVolume.toFixed(2)} m³
+- BG-Type (Slopes/Cuttings Step C=${result.superBlock.stepC.toFixed(2)}m):
+  Ref: ${result.foundations.bgType.reference} | Dim: ${result.foundations.bgType.dimText}
+  Base: ${result.foundations.bgType.baseVolume.toFixed(2)} m³ | Muff: ${result.foundations.bgType.muffVolume.toFixed(2)} m³ | Super Block: ${result.foundations.bgType.superBlockVolume.toFixed(2)} m³ | Total: ${result.foundations.bgType.totalVolume.toFixed(2)} m³
+- NG-Type (Loose Soil 5,500 kgf/m²):
+  Ref: ${result.foundations.ngType.reference} | Dim: ${result.foundations.ngType.dimText}
+  Base: ${result.foundations.ngType.baseVolume.toFixed(2)} m³ | Muff: ${result.foundations.ngType.muffVolume.toFixed(2)} m³ | Super Block: ${result.foundations.ngType.superBlockVolume.toFixed(2)} m³ | Total: ${result.foundations.ngType.totalVolume.toFixed(2)} m³
+- NBC-Type (Dry Black Cotton 16,500 kgf/m²):
+  Ref: ${result.foundations.nbcType.reference} | Dim: ${result.foundations.nbcType.dimText}
+  Base: ${result.foundations.nbcType.baseVolume.toFixed(2)} m³ | Muff: ${result.foundations.nbcType.muffVolume.toFixed(2)} m³ | Super Block: ${result.foundations.nbcType.superBlockVolume.toFixed(2)} m³ | Total: ${result.foundations.nbcType.totalVolume.toFixed(2)} m³
+- WBC-Type (Wet Black Cotton 8,000 kgf/m²):
+  Ref: ${result.foundations.wbcType.reference} | Dim: ${result.foundations.wbcType.dimText}
+  Base: ${result.foundations.wbcType.baseVolume.toFixed(2)} m³ | Muff: ${result.foundations.wbcType.muffVolume.toFixed(2)} m³ | Super Block: ${result.foundations.wbcType.superBlockVolume.toFixed(2)} m³ | Total: ${result.foundations.wbcType.totalVolume.toFixed(2)} m³
+
+* Reference: Indian Railways RDSO Employment Schedules, ACTM Vol-II, and Volume Charts.`;
+
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  return (
+    <TooltipProvider delayDuration={200}>
+      <div className="min-h-screen bg-background text-foreground antialiased">
+        {/* Top Navigation Bar */}
+        <header className="no-print relative z-30 flex h-16 items-center justify-between border-b border-border bg-panel-deep px-4 sm:px-6">
+          <div className="flex items-center gap-3">
+            <div className="flex size-9 items-center justify-center rounded bg-primary text-primary-foreground shadow-sm">
+              <TrainFront className="size-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="font-display text-base font-bold uppercase tracking-tight sm:text-lg">
+                  RDSO <span className="text-signal">OHE</span> Configurator
+                </h1>
+                <Badge variant="outline" className="hidden border-border font-mono text-[9px] text-muted-foreground sm:inline-flex">
+                  V2.1 ACTM / RDSO
+                </Badge>
+              </div>
+              <p className="hidden font-mono text-[10px] text-muted-foreground sm:block">
+                Coupled Mast Sizing, Cess Step Level (C), Super Block Engine & Multi-Soil Matrix
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="mr-2 hidden items-center gap-1.5 rounded-sm border border-border/80 bg-panel px-2.5 py-1 font-mono text-[10px] text-muted-foreground md:flex">
+              <span
+                className={`size-2 rounded-full ${
+                  allStepsComplete ? 'animate-pulse bg-success' : 'bg-signal'
+                }`}
+              />
+              {allStepsComplete ? 'COUPLING ACTIVE' : 'AWAITING CONFIGURATION'}
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => loadPreset('sample')}
+              className="hidden border-border bg-panel text-xs hover:border-primary/50 sm:inline-flex"
+            >
+              <Sparkles className="size-3.5 text-signal" /> Sample
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => loadPreset('excess-step')}
+              className="hidden border-border bg-panel text-xs hover:border-signal/50 sm:inline-flex"
+              title="Test Cess Step C = 1.20m with Super Block"
+            >
+              <Box className="size-3.5 text-signal" /> Excess Step Demo
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={reset}
+              className="hidden border-border bg-panel text-xs hover:border-destructive/40 sm:inline-flex"
+            >
+              <RotateCcw className="size-3.5" /> Reset
+            </Button>
+
+            <Button
+              size="sm"
+              onClick={() => window.print()}
+              className="hidden bg-primary text-primary-foreground sm:inline-flex"
+            >
+              <ArrowDownToLine className="size-3.5" /> Print Sheet
+            </Button>
+
+            <Button
+              variant="outline"
+              size="icon"
+              className="border-border bg-panel lg:hidden"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Toggle Menu"
+            >
+              <Menu className="size-4" />
+            </Button>
+          </div>
+        </header>
+
+        {/* Main Application Layout */}
+        <div className="no-print flex flex-col lg:h-[calc(100vh-64px)] lg:flex-row lg:overflow-hidden">
+          {/* Left Column: Sequential Engineering Wizard */}
+          <aside
+            className={`w-full shrink-0 border-b border-border bg-panel lg:w-[470px] xl:w-[500px] lg:border-b-0 lg:border-r lg:overflow-y-auto ${
+              mobileMenuOpen ? 'block' : 'hidden lg:block'
+            }`}
+          >
+            {/* Wizard Header Status */}
+            <div className="sticky top-0 z-20 border-b border-border bg-panel/95 backdrop-blur-sm px-5 py-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <SlidersHorizontal className="size-4 text-primary" />
+                  <span className="text-xs font-bold uppercase tracking-wider">Sequential Wizard</span>
+                </div>
+                <div className="font-mono text-[10px] text-muted-foreground">
+                  PROGRESS:{' '}
+                  <span className="font-bold text-signal">
+                    {[step1Done, step2Done, step3Done, step4Done].filter(Boolean).length}/4
+                  </span>
+                </div>
+              </div>
+              {/* Progress bar */}
+              <div className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-panel-deep">
+                <div
+                  className="h-full bg-signal transition-all duration-300"
+                  style={{
+                    width: `${([step1Done, step2Done, step3Done, step4Done].filter(Boolean).length / 4) * 100}%`,
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="divide-y divide-border">
+              {/* STEP 1: Wind Pressure (RDSO / IS:875) */}
+              <section className="bg-panel-deep/30">
+                <StepHeader
+                  number="1"
+                  title="Wind Pressure (RDSO / IS:875)"
+                  subtitle="Filters subsequent schedules & structural sizing"
+                  completed={step1Done}
+                  active={!step1Done}
+                />
+                <div className="p-5">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {windZones.map((zone) => {
+                      const isSelected = wind === zone.value;
+                      return (
+                        <button
+                          key={zone.value}
+                          type="button"
+                          onClick={() => setWind(zone.value)}
+                          className={`flex flex-col items-start rounded border p-2.5 text-left transition-all ${
+                            isSelected
+                              ? 'border-signal bg-signal/10 ring-1 ring-signal'
+                              : 'border-border bg-panel hover:border-border hover:bg-panel-deep'
+                          }`}
+                        >
+                          <div className="flex w-full items-center justify-between">
+                            <span className="font-mono text-xs font-bold text-foreground">
+                              {zone.value} <span className="text-[10px] font-normal text-muted-foreground">kgf/m²</span>
+                            </span>
+                            {isSelected && <Check className="size-3 text-signal" />}
+                          </div>
+                          <span className="mt-1 text-[10px] font-medium text-signal">
+                            {zone.zone} ({zone.speed})
+                          </span>
+                          <span className="mt-0.5 truncate text-[9px] text-muted-foreground" title={zone.desc}>
+                            {zone.desc}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {wind && (
+                    <div className="mt-3 flex items-center gap-2 font-mono text-[10px] text-muted-foreground">
+                      <CheckCircle2 className="size-3.5 text-success" />
+                      Wind Zone: <strong className="text-foreground">{wind} kgf/m²</strong> (
+                      {windZones.find((z) => z.value === wind)?.zone})
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              {/* STEP 2: Implantation & Cess Step Level Difference (C) */}
+              <section className={!step1Done ? 'opacity-40 pointer-events-none' : 'bg-panel-deep/30'}>
+                <StepHeader
+                  number="2"
+                  title="Implantation & Cess Step (C)"
+                  subtitle="Setting distance, Cess Step C, and Super Block Engine"
+                  completed={step2Done}
+                  active={step1Done && !step2Done}
+                />
+                <div className="p-5 space-y-4">
+                  {/* 1. Implantation Mode Cards */}
+                  <div>
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                      1. Implantation Selection
+                    </label>
+                    <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      {/* Card A: Fixed Standard */}
+                      <div
+                        onClick={() => setImplantationMode('standard')}
+                        className={`cursor-pointer rounded border p-3 transition-all ${
+                          implantationMode === 'standard' && (implantation ?? 3.0) === 3.0
+                            ? 'border-primary bg-primary/10 ring-1 ring-primary'
+                            : 'border-border bg-panel hover:bg-panel-deep'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold uppercase text-foreground">Card A: Standard</span>
+                          {implantationMode === 'standard' && <Check className="size-3.5 text-primary" />}
+                        </div>
+                        <div className="mt-2 font-mono text-xl font-bold text-signal">
+                          3.00 <span className="text-xs font-normal text-muted-foreground">m</span>
+                        </div>
+                        <p className="mt-1 text-[10px] text-muted-foreground">
+                          Fixed standard setting distance (baseline 2.80–3.00 m).
+                        </p>
+                      </div>
+
+                      {/* Card B: Dynamic Custom */}
+                      <div
+                        onClick={() => setImplantationMode('custom')}
+                        className={`cursor-pointer rounded border p-3 transition-all ${
+                          implantationMode === 'custom'
+                            ? 'border-primary bg-primary/10 ring-1 ring-primary'
+                            : 'border-border bg-panel hover:bg-panel-deep'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold uppercase text-foreground">Card B: Dynamic</span>
+                          {implantationMode === 'custom' && <Check className="size-3.5 text-primary" />}
+                        </div>
+                        <div className="mt-2 font-mono text-xl font-bold text-signal">
+                          {(implantation ?? 3.5).toFixed(2)}{' '}
+                          <span className="text-xs font-normal text-muted-foreground">m</span>
+                        </div>
+                        <p className="mt-1 text-[10px] text-muted-foreground">
+                          Dynamic setting bounded between 3.00 m and 5.00 m.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Interactive Slider and Input for Implantation */}
+                  <div className="rounded border border-border/80 bg-panel p-3.5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                        Implantation Distance (m)
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min={3.0}
+                          max={5.0}
+                          step={0.05}
+                          value={implantation ?? 3.0}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value);
+                            if (!isNaN(val)) {
+                              setImplantationMode('custom');
+                              setImplantation(val);
+                            }
+                          }}
+                          className="h-7 w-20 border-border bg-panel-deep text-right font-mono text-xs"
+                        />
+                        <span className="font-mono text-xs text-muted-foreground">m</span>
+                      </div>
+                    </div>
+
+                    <Slider
+                      min={3.0}
+                      max={5.0}
+                      step={0.05}
+                      value={[implantation ?? 3.0]}
+                      onValueChange={(vals) => {
+                        setImplantationMode('custom');
+                        setImplantation(vals[0] ?? 3.0);
+                      }}
+                      className="py-1"
+                    />
+
+                    <div className="flex justify-between font-mono text-[9px] text-muted-foreground">
+                      <span>Min: 3.00 m</span>
+                      <span className="font-bold text-signal">STEP: 0.05 m</span>
+                      <span>Max: 5.00 m</span>
+                    </div>
+
+                    {/* Tier Flag Banner */}
+                    <div
+                      className={`rounded border px-3 py-2 text-[11px] ${
+                        result.requiresChair
+                          ? 'border-signal/40 bg-signal-soft text-signal'
+                          : 'border-border bg-panel-deep text-muted-foreground'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 font-bold">
+                        <span className="font-mono">{result.implantationTier}:</span> {result.tierDescription}
+                      </div>
+                      {result.requiresChair && (
+                        <p className="mt-1 text-[10px] leading-tight">
+                          ⚠️ Warning: Requires Cantilever Adaptor Chair per RDSO Drawing <strong>ETI/OHE/P/3131</strong>.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 2. Cess Step Level Difference (C) & Super Block Engineering */}
+                  <div className="rounded border border-border/80 bg-panel p-3.5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <label className="text-[11px] font-bold uppercase text-foreground">
+                          2. Cess Step Level Difference (C)
+                        </label>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="size-3 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            Vertical distance from Rail Level (RL) to top of foundation casting. Standard C ≤ 0.50 m. If
+                            C &gt; 0.50 m, a monolithic Super Block is mandated by ACTM Vol-II.
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min={0.0}
+                          max={2.0}
+                          step={0.05}
+                          value={stepLevel}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value);
+                            if (!isNaN(val)) setStepLevel(val);
+                          }}
+                          className="h-7 w-20 border-border bg-panel-deep text-right font-mono text-xs"
+                        />
+                        <span className="font-mono text-xs text-muted-foreground">m</span>
+                      </div>
+                    </div>
+
+                    <Slider
+                      min={0.0}
+                      max={2.0}
+                      step={0.05}
+                      value={[stepLevel]}
+                      onValueChange={(vals) => setStepLevel(vals[0] ?? 0.5)}
+                      className="py-1"
+                    />
+
+                    <div className="flex items-center justify-between font-mono text-[9px] text-muted-foreground">
+                      <span>0.00 m (Flush)</span>
+                      <span className="font-bold text-signal">STANDARD: 0.50 m</span>
+                      <span>2.00 m (Deep)</span>
+                    </div>
+
+                    {/* Engineering Threshold Status */}
+                    <div
+                      className={`flex items-center justify-between rounded border px-3 py-2 text-[11px] ${
+                        result.superBlock.required
+                          ? 'border-destructive/40 bg-destructive/10 text-destructive'
+                          : 'border-success/30 bg-success/10 text-success'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 font-bold">
+                        {result.superBlock.required ? (
+                          <AlertTriangle className="size-4 shrink-0 text-destructive" />
+                        ) : (
+                          <CheckCircle2 className="size-4 shrink-0 text-success" />
+                        )}
+                        <span>{result.superBlock.status}</span>
+                      </div>
+                      <span className="font-mono text-[10px]">C = {result.superBlock.stepC.toFixed(2)} m</span>
+                    </div>
+
+                    {/* Super Block Details Card (If C > 0.50 m) */}
+                    {result.superBlock.required ? (
+                      <div className="rounded border border-signal/40 bg-signal-soft p-3 text-[11px] space-y-2 text-foreground">
+                        <div className="flex items-center justify-between font-bold text-signal">
+                          <span className="flex items-center gap-1.5">
+                            <Box className="size-4" /> Super Block Mandated (ACTM Vol-II)
+                          </span>
+                          <span className="font-mono text-xs">
+                            H_sb = {result.superBlock.height.toFixed(2)} m
+                          </span>
+                        </div>
+                        <p className="text-[10px] leading-relaxed text-muted-foreground">
+                          Super Block required of size ({result.foundations.bType.a.toFixed(2)}m ×{' '}
+                          {result.foundations.bType.b.toFixed(2)}m top) × {result.superBlock.height.toFixed(2)} m height
+                          to bring top of casting to within 500 mm of Rail Level.
+                        </p>
+                        <div className="grid grid-cols-2 gap-2 pt-1 font-mono text-[10px]">
+                          <div className="rounded bg-panel-deep px-2 py-1 border border-border">
+                            <span className="text-muted-foreground">Extra Concrete Vol:</span>{' '}
+                            <strong className="text-signal">
+                              {result.foundations.bType.superBlockVolume.toFixed(2)} m³
+                            </strong>
+                          </div>
+                          <div className="rounded bg-panel-deep px-2 py-1 border border-border">
+                            <span className="text-muted-foreground">Mast below RL:</span>{' '}
+                            <strong className="text-foreground">
+                              {result.superBlock.mastBelowRL.toFixed(2)} m
+                            </strong>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rounded border border-border bg-panel-deep p-2.5 font-mono text-[10px] text-muted-foreground space-y-1">
+                        <div className="flex justify-between">
+                          <span>Mast embedment in foundation:</span>
+                          <span className="text-foreground">1.35 m</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Mast below Rail Level (1.35m + C):</span>
+                          <span className="text-foreground">{result.superBlock.mastBelowRL.toFixed(2)} m</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Super Block requirement:</span>
+                          <span className="text-success font-semibold">None (Standard C ≤ 0.50m)</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Clause 3.5.14 Violation Alert */}
+                    {result.superBlock.clause3514Violation && (
+                      <div className="flex items-start gap-2 rounded border border-destructive bg-destructive/20 p-2.5 text-[11px] text-destructive">
+                        <AlertOctagon className="mt-0.5 size-4 shrink-0" />
+                        <span>
+                          <strong>Clause 3.5.14 Violation:</strong> Mast below RL cannot exceed 1.850 m without casting
+                          a monolithic Super Block.
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </section>
+
+              {/* STEP 3: Alignment & Curve Parameters */}
+              <section className={!step2Done ? 'opacity-40 pointer-events-none' : 'bg-panel-deep/30'}>
+                <StepHeader
+                  number="3"
+                  title="Track Alignment & Curvature"
+                  subtitle="Tangent or Curvature with dynamic Versine & Clearance"
+                  completed={step3Done}
+                  active={step2Done && !step3Done}
+                />
+                <div className="p-5 space-y-4">
+                  {/* Segmented Control */}
+                  <div className="grid grid-cols-3 gap-1 rounded border border-border bg-panel-deep p-1">
+                    {[
+                      { key: 'tangent', label: 'Tangent (Straight)' },
+                      { key: 'inside', label: 'Inside Curve' },
+                      { key: 'outside', label: 'Outside Curve' },
+                    ].map((item) => (
+                      <button
+                        key={item.key}
+                        type="button"
+                        onClick={() => setAlignment(item.key as Alignment)}
+                        className={`rounded py-2 text-[11px] font-semibold transition-all ${
+                          alignment === item.key
+                            ? 'bg-primary text-primary-foreground shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Curve Parameters */}
+                  {alignment && alignment !== 'tangent' && (
+                    <div className="rounded border border-border/80 bg-panel p-3.5 space-y-3.5">
+                      {/* Radius Selector */}
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                            Curve Radius (R)
+                          </label>
+                          <span className="font-mono text-xs font-bold text-signal">{radius} m</span>
+                        </div>
+                        <Slider
+                          min={200}
+                          max={2500}
+                          step={50}
+                          value={[radius]}
+                          onValueChange={(vals) => setRadius(vals[0] ?? 1000)}
+                          className="mt-2.5 py-1"
+                        />
+                        <div className="mt-1 flex justify-between font-mono text-[9px] text-muted-foreground">
+                          <span>200 m (Sharp)</span>
+                          <span>2500 m (Mild)</span>
+                        </div>
+                      </div>
+
+                      {/* Span Selector */}
+                      <div>
+                        <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                          OHE Span Length (m)
+                        </label>
+                        <Select value={String(span)} onValueChange={(val) => setSpan(parseFloat(val))}>
+                          <SelectTrigger className="mt-1.5 h-8 border-border bg-panel-deep font-mono text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {spans.map((s) => (
+                              <SelectItem key={s} value={String(s)} className="font-mono text-xs">
+                                {s.toFixed(1)} m standard span
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Dynamic Versine Readout */}
+                      <div className="flex items-center justify-between rounded bg-panel-deep px-3 py-2 border border-border">
+                        <span className="font-mono text-[10px] uppercase text-muted-foreground">
+                          Versine: S² / (8 × R) × 1000
+                        </span>
+                        <span className="font-mono text-xs font-bold text-signal">
+                          {result.versine.toFixed(1)} mm
+                        </span>
+                      </div>
+
+                      {/* Inside Curve Clearance Auto-enforce Notice */}
+                      {alignment === 'inside' && !result.settingValid && (
+                        <div className="flex items-start gap-2 rounded border border-destructive/40 bg-destructive/10 p-2.5 text-[11px] text-destructive">
+                          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                          <span>
+                            Setting distance ({implantation?.toFixed(2)} m) is below the RDSO minimum (
+                            {result.minSetting.toFixed(2)} m) required for an inside curve of radius {radius} m.
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {alignment === 'tangent' && (
+                    <div className="flex items-center justify-between rounded border border-border bg-panel px-3 py-2 font-mono text-[10px] text-muted-foreground">
+                      <span>Catenary Stagger: 0 mm</span>
+                      <span className="text-foreground">Versine: 0.0 mm</span>
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              {/* STEP 4: Mast Function Selection (Reactive Core) */}
+              <section className={!step3Done ? 'opacity-40 pointer-events-none' : 'bg-panel-deep/30'}>
+                <StepHeader
+                  number="4"
+                  title="Mast Function Selection (Reactive Core)"
+                  subtitle="Dynamically scales Mast Type, Reverse Deflection & FBM Code"
+                  completed={step4Done}
+                  active={step3Done && !step4Done}
+                />
+                <div className="p-5">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {roles.map((r) => {
+                      const isSelected = role === r.value;
+                      return (
+                        <button
+                          key={r.value}
+                          type="button"
+                          onClick={() => setRole(r.value)}
+                          className={`flex flex-col items-start rounded border p-2.5 text-left transition-all ${
+                            isSelected
+                              ? 'border-signal bg-signal/10 ring-1 ring-signal shadow-sm'
+                              : 'border-border bg-panel hover:border-border hover:bg-panel-deep'
+                          }`}
+                        >
+                          <div className="flex w-full items-center justify-between">
+                            <span className="font-mono text-xs font-bold text-foreground">{r.label}</span>
+                            {isSelected && <Check className="size-3 text-signal" />}
+                          </div>
+                          <span className="mt-0.5 text-[10px] font-medium text-signal">{r.title}</span>
+                          <span className="mt-1 line-clamp-2 text-[9px] leading-tight text-muted-foreground">
+                            {r.detail}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </section>
+            </div>
+          </aside>
+
+          {/* Right Column: 3D Viewport and Dynamic Foundation Matrix */}
+          <main className="flex min-w-0 flex-1 flex-col overflow-y-auto bg-background">
+            {/* 3D Scene Viewport / Conditional Blueprint Card */}
+            <section className="relative flex h-[420px] shrink-0 flex-col overflow-hidden border-b border-border bg-[#0d1520] lg:h-[480px]">
+              {/* Header Bar over Viewport */}
+              <div className="relative z-10 flex items-center justify-between border-b border-border/80 bg-panel-deep/80 px-4 py-2.5 backdrop-blur-md">
+                <div className="flex items-center gap-2">
+                  <Box className="size-4 text-primary" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-foreground">
+                    3D Digital Twin Viewport
+                  </span>
+                  {allStepsComplete && (
+                    <Badge variant="outline" className="ml-2 border-primary/30 bg-primary/10 font-mono text-[9px] text-primary">
+                      {result.mastSection}
+                    </Badge>
+                  )}
+                  {allStepsComplete && result.superBlock.required && (
+                    <Badge variant="outline" className="border-signal/40 bg-signal-soft font-mono text-[9px] text-signal">
+                      SUPER BLOCK: {result.superBlock.height.toFixed(2)}m
+                    </Badge>
+                  )}
+                </div>
+
+                {allStepsComplete && (
+                  <div className="flex items-center gap-1.5">
+                    {/* View preset buttons */}
+                    <div className="flex items-center rounded border border-border bg-panel p-0.5">
+                      {(
+                        [
+                          ['iso', 'Isometric'],
+                          ['front', 'Front'],
+                          ['side', 'Side'],
+                          ['top', 'Top'],
+                        ] as const
+                      ).map(([v, label]) => (
+                        <button
+                          key={v}
+                          type="button"
+                          onClick={() => setSceneView(v)}
+                          className={`rounded px-2 py-1 text-[10px] font-medium transition-colors ${
+                            sceneView === v ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Wireframe toggle */}
+                    <Button
+                      variant={wireframe ? 'secondary' : 'outline'}
+                      size="sm"
+                      onClick={() => setWireframe(!wireframe)}
+                      className="h-7 border-border px-2 text-[10px]"
+                      title="Toggle Wireframe mode"
+                    >
+                      <Eye className="size-3 mr-1" /> Wireframe
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Viewport Content: Conditional Rendering */}
+              <div className="relative flex-1">
+                {allStepsComplete ? (
+                  <Suspense
+                    fallback={
+                      <div className="flex h-full items-center justify-center font-mono text-xs text-muted-foreground">
+                        Initializing 3D WebGL Canvas…
+                      </div>
+                    }
+                  >
+                    <OheScene
+                      config={{
+                        wind,
+                        implantationMode,
+                        implantation,
+                        stepLevel,
+                        alignment,
+                        radius,
+                        span,
+                        role,
+                      }}
+                      result={result}
+                      view={sceneView}
+                      wireframe={wireframe}
+                    />
+
+                    {/* Overlay HUD Readouts */}
+                    <div className="pointer-events-none absolute bottom-4 left-4 flex flex-wrap gap-2">
+                      <div className="flex items-center gap-2 rounded border border-border bg-panel-deep/90 px-3 py-1.5 font-mono text-[10px] text-foreground backdrop-blur-sm">
+                        <Crosshair className="size-3.5 text-signal" />
+                        IMPLANTATION: <span className="font-bold text-signal">{(implantation ?? 3.0).toFixed(2)} m</span>
+                      </div>
+                      <div className="flex items-center gap-2 rounded border border-border bg-panel-deep/90 px-3 py-1.5 font-mono text-[10px] text-foreground backdrop-blur-sm">
+                        STEP (C): <span className="font-bold text-signal">{result.superBlock.stepC.toFixed(2)} m</span>
+                      </div>
+                      <div className="flex items-center gap-2 rounded border border-border bg-panel-deep/90 px-3 py-1.5 font-mono text-[10px] text-foreground backdrop-blur-sm">
+                        DEFLECTION: <span className="font-bold text-signal">{result.deflectionDirection}</span>
+                      </div>
+                      <div className="flex items-center gap-2 rounded border border-border bg-panel-deep/90 px-3 py-1.5 font-mono text-[10px] text-foreground backdrop-blur-sm">
+                        FBM CODE: <span className="font-bold text-signal">{result.fbmCode}</span>
+                      </div>
+                    </div>
+
+                    <div className="pointer-events-none absolute bottom-4 right-4 hidden rounded border border-border bg-panel-deep/80 px-2.5 py-1 font-mono text-[9px] text-muted-foreground backdrop-blur-sm sm:block">
+                      ORBIT: Left Click + Drag · PAN: Right Click · ZOOM: Scroll
+                    </div>
+                  </Suspense>
+                ) : (
+                  /* High-End Technical Blueprint Empty State */
+                  <div className="relative flex h-full flex-col items-center justify-center p-8 text-center">
+                    <div className="pointer-events-none absolute inset-0 opacity-15 technical-grid" />
+
+                    <div className="relative z-10 max-w-md rounded-lg border border-border/80 bg-panel-deep/90 p-6 shadow-2xl backdrop-blur-md">
+                      <div className="mx-auto flex size-12 items-center justify-center rounded-full border border-primary/40 bg-primary/10 text-primary">
+                        <Layers className="size-6 animate-pulse" />
+                      </div>
+
+                      <h3 className="mt-4 text-sm font-bold uppercase tracking-wider text-foreground">
+                        Awaiting Configuration Parameters
+                      </h3>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Configure Wind Pressure, Implantation, Cess Step Level (C), Alignment, and Mast Function to
+                        generate 3D Digital Twin and Foundation Matrix.
+                      </p>
+
+                      {/* Step completion pills */}
+                      <div className="mt-4 grid grid-cols-2 gap-2 text-left font-mono text-[10px]">
+                        <div
+                          className={`flex items-center gap-1.5 rounded border px-2.5 py-1.5 ${
+                            step1Done ? 'border-success/40 bg-success/10 text-success' : 'border-border bg-panel text-muted-foreground'
+                          }`}
+                        >
+                          <CircleDot className="size-3" />
+                          <span>1. Wind: {wind ? `${wind} kgf/m²` : 'Pending'}</span>
+                        </div>
+
+                        <div
+                          className={`flex items-center gap-1.5 rounded border px-2.5 py-1.5 ${
+                            step2Done ? 'border-success/40 bg-success/10 text-success' : 'border-border bg-panel text-muted-foreground'
+                          }`}
+                        >
+                          <CircleDot className="size-3" />
+                          <span>2. Imp/Cess: {implantation ? `${implantation.toFixed(2)}m (C=${stepLevel.toFixed(2)}m)` : 'Pending'}</span>
+                        </div>
+
+                        <div
+                          className={`flex items-center gap-1.5 rounded border px-2.5 py-1.5 ${
+                            step3Done ? 'border-success/40 bg-success/10 text-success' : 'border-border bg-panel text-muted-foreground'
+                          }`}
+                        >
+                          <CircleDot className="size-3" />
+                          <span>3. Alignment: {alignment ? alignment : 'Pending'}</span>
+                        </div>
+
+                        <div
+                          className={`flex items-center gap-1.5 rounded border px-2.5 py-1.5 ${
+                            step4Done ? 'border-success/40 bg-success/10 text-success' : 'border-border bg-panel text-muted-foreground'
+                          }`}
+                        >
+                          <CircleDot className="size-3" />
+                          <span>4. Function: {role ? role : 'Pending'}</span>
+                        </div>
+                      </div>
+
+                      <div className="mt-5 flex justify-center gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => loadPreset('sample')}
+                          className="bg-primary text-primary-foreground text-xs"
+                        >
+                          <Sparkles className="size-3.5 mr-1" /> Load Standard Setup
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* Dynamic Structural Cascade & Multi-Soil Dynamic Foundation Matrix */}
+            <section className="p-4 sm:p-6 space-y-6">
+              {/* Output Engine Summary Cards */}
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                <div className="rounded border border-border bg-panel p-3.5">
+                  <div className="flex items-center justify-between text-muted-foreground">
+                    <span className="text-[10px] font-bold uppercase">Recommended Mast</span>
+                    <Layers3 className="size-4 text-primary" />
+                  </div>
+                  <div className="mt-2 font-display text-base font-bold text-foreground">
+                    {result.mastSection}
+                  </div>
+                  <div className="mt-1 font-mono text-[9px] text-muted-foreground">
+                    Total: {result.mastLengthTotal}m · Embed: {result.mastLengthEmbedded}m
+                    {result.superBlock.required && ` + ${result.superBlock.height.toFixed(2)}m SB`}
+                  </div>
+                </div>
+
+                <div className="rounded border border-border bg-panel p-3.5">
+                  <div className="flex items-center justify-between text-muted-foreground">
+                    <span className="text-[10px] font-bold uppercase">Reverse Deflection</span>
+                    <Compass className="size-4 text-signal" />
+                  </div>
+                  <div className="mt-2 font-display text-base font-bold text-signal">
+                    {result.deflectionDirection}
+                  </div>
+                  <div className="mt-1 font-mono text-[9px] text-muted-foreground">
+                    {role === 'OLA/BWA' ? 'Guy wire anchor counter-deflection' : 'Cantilever load pre-camber'}
+                  </div>
+                </div>
+
+                <div className="rounded border border-border bg-panel p-3.5">
+                  <div className="flex items-center justify-between text-muted-foreground">
+                    <span className="text-[10px] font-bold uppercase">FBM Code (RDSO)</span>
+                    <Gauge className="size-4 text-primary" />
+                  </div>
+                  <div className="mt-2 font-display text-xl font-bold text-primary">
+                    {result.fbmCode}
+                  </div>
+                  <div className="mt-1 font-mono text-[9px] text-muted-foreground">
+                    Foundation Bending Moment Schedule Code
+                  </div>
+                </div>
+
+                <div className="rounded border border-border bg-panel p-3.5">
+                  <div className="flex items-center justify-between text-muted-foreground">
+                    <span className="text-[10px] font-bold uppercase">Cess Step & Super Block</span>
+                    <Box className="size-4 text-signal" />
+                  </div>
+                  <div className="mt-2 font-display text-base font-bold text-foreground">
+                    {result.superBlock.required ? `H = ${result.superBlock.height.toFixed(2)} m` : 'Standard Step'}
+                  </div>
+                  <div className="mt-1 font-mono text-[9px] text-muted-foreground">
+                    C = {result.superBlock.stepC.toFixed(2)} m (RL to Foundation Top)
+                  </div>
+                </div>
+              </div>
+
+              {/* Navigation Tabs */}
+              <div className="flex items-center justify-between border-b border-border">
+                <div className="flex gap-4">
+                  {[
+                    { id: 'matrix', label: 'Multi-Soil Dynamic Foundation Matrix', icon: FileSpreadsheet },
+                    { id: 'specifications', label: 'Engineering Schedule Parameters', icon: Activity },
+                    { id: 'rdso-notes', label: 'RDSO & ACTM Design Notes', icon: ShieldCheck },
+                  ].map((tab) => {
+                    const Icon = tab.icon;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setActiveTab(tab.id as any)}
+                        className={`flex items-center gap-1.5 border-b-2 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors ${
+                          activeTab === tab.id
+                            ? 'border-signal text-signal'
+                            : 'border-transparent text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        <Icon className="size-3.5" />
+                        {tab.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={copyTechnicalSummary}
+                  className="h-8 border-border bg-panel text-xs"
+                >
+                  {copied ? <Check className="size-3.5 text-success mr-1" /> : <Copy className="size-3.5 mr-1" />}
+                  {copied ? 'Copied to Clipboard' : 'Copy Spec'}
+                </Button>
+              </div>
+
+              {/* Tab 1: Multi-Soil Dynamic Foundation Matrix Table (7 Columns strictly per spec) */}
+              {activeTab === 'matrix' && (
+                <div className="space-y-4">
+                  <div className="overflow-x-auto rounded border border-border bg-panel">
+                    <table className="w-full min-w-[760px] text-left text-xs">
+                      <thead className="border-b border-border bg-panel-deep font-mono text-[10px] uppercase text-muted-foreground">
+                        <tr>
+                          <th className="px-4 py-3">RDSO Reference / Soil Type</th>
+                          <th className="px-4 py-3">Foundation Code</th>
+                          <th className="px-4 py-3">Dimensions (A × B × H in meters)</th>
+                          <th className="px-4 py-3">Base Vol (m³)</th>
+                          <th className="px-4 py-3">Muff Vol (m³)</th>
+                          <th className="px-4 py-3">Super Block (m³)</th>
+                          <th className="px-4 py-3 font-bold text-signal">Total Vol (m³)</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border font-mono text-[11px]">
+                        {/* Row 1: B-Type */}
+                        <tr className="hover:bg-panel-deep/50 transition-colors">
+                          <td className="px-4 py-3">
+                            <strong className="text-foreground">B-Type (Side Bearing)</strong>
+                            <span className="block font-sans text-[9px] text-muted-foreground">
+                              {result.foundations.bType.soilName} ({result.foundations.bType.bearingCapacity})
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 font-bold text-primary">
+                            {result.foundations.bType.reference}
+                          </td>
+                          <td className="px-4 py-3 text-foreground">
+                            {result.foundations.bType.dimText}
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">
+                            {result.foundations.bType.baseVolume.toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">
+                            {result.foundations.bType.muffVolume.toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">
+                            {result.foundations.bType.superBlockVolume > 0 ? (
+                              <span className="font-bold text-signal">
+                                {result.foundations.bType.superBlockVolume.toFixed(2)}
+                              </span>
+                            ) : (
+                              '—'
+                            )}
+                          </td>
+                          <td className="px-4 py-3 font-bold text-signal">
+                            {result.foundations.bType.totalVolume.toFixed(2)}
+                          </td>
+                        </tr>
+
+                        {/* Row 2: BG-Type */}
+                        <tr className="hover:bg-panel-deep/50 transition-colors bg-panel-deep/20">
+                          <td className="px-4 py-3">
+                            <strong className="text-foreground">BG-Type (Side Gravity)</strong>
+                            <span className="block font-sans text-[9px] text-muted-foreground">
+                              {result.foundations.bgType.soilName} (Slope step C = {result.superBlock.stepC.toFixed(2)}m)
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 font-bold text-primary">
+                            {result.foundations.bgType.reference}
+                          </td>
+                          <td className="px-4 py-3 text-foreground">
+                            {result.foundations.bgType.dimText}
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">
+                            {result.foundations.bgType.baseVolume.toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">
+                            {result.foundations.bgType.muffVolume.toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">
+                            {result.foundations.bgType.superBlockVolume > 0 ? (
+                              <span className="font-bold text-signal">
+                                {result.foundations.bgType.superBlockVolume.toFixed(2)}
+                              </span>
+                            ) : (
+                              '—'
+                            )}
+                          </td>
+                          <td className="px-4 py-3 font-bold text-signal">
+                            {result.foundations.bgType.totalVolume.toFixed(2)}
+                          </td>
+                        </tr>
+
+                        {/* Row 3: NG-Type */}
+                        <tr className="hover:bg-panel-deep/50 transition-colors">
+                          <td className="px-4 py-3">
+                            <strong className="text-foreground">NG-Type (Pure Gravity)</strong>
+                            <span className="block font-sans text-[9px] text-muted-foreground">
+                              {result.foundations.ngType.soilName} ({result.foundations.ngType.bearingCapacity})
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 font-bold text-primary">
+                            {result.foundations.ngType.reference}
+                          </td>
+                          <td className="px-4 py-3 text-foreground">
+                            {result.foundations.ngType.dimText}
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">
+                            {result.foundations.ngType.baseVolume.toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">
+                            {result.foundations.ngType.muffVolume.toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">
+                            {result.foundations.ngType.superBlockVolume > 0 ? (
+                              <span className="font-bold text-signal">
+                                {result.foundations.ngType.superBlockVolume.toFixed(2)}
+                              </span>
+                            ) : (
+                              '—'
+                            )}
+                          </td>
+                          <td className="px-4 py-3 font-bold text-signal">
+                            {result.foundations.ngType.totalVolume.toFixed(2)}
+                          </td>
+                        </tr>
+
+                        {/* Row 4: NBC-Type */}
+                        <tr className="hover:bg-panel-deep/50 transition-colors">
+                          <td className="px-4 py-3">
+                            <strong className="text-foreground">NBC-Type (Dry Black Cotton)</strong>
+                            <span className="block font-sans text-[9px] text-muted-foreground">
+                              {result.foundations.nbcType.soilName} ({result.foundations.nbcType.bearingCapacity})
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 font-bold text-primary">
+                            {result.foundations.nbcType.reference}
+                          </td>
+                          <td className="px-4 py-3 text-foreground">
+                            {result.foundations.nbcType.dimText}
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">
+                            {result.foundations.nbcType.baseVolume.toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">
+                            {result.foundations.nbcType.muffVolume.toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">
+                            {result.foundations.nbcType.superBlockVolume > 0 ? (
+                              <span className="font-bold text-signal">
+                                {result.foundations.nbcType.superBlockVolume.toFixed(2)}
+                              </span>
+                            ) : (
+                              '—'
+                            )}
+                          </td>
+                          <td className="px-4 py-3 font-bold text-signal">
+                            {result.foundations.nbcType.totalVolume.toFixed(2)}
+                          </td>
+                        </tr>
+
+                        {/* Row 5: WBC-Type */}
+                        <tr className="hover:bg-panel-deep/50 transition-colors">
+                          <td className="px-4 py-3">
+                            <strong className="text-foreground">WBC-Type (Wet Black Cotton)</strong>
+                            <span className="block font-sans text-[9px] text-muted-foreground">
+                              {result.foundations.wbcType.soilName} ({result.foundations.wbcType.bearingCapacity})
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 font-bold text-primary">
+                            {result.foundations.wbcType.reference}
+                          </td>
+                          <td className="px-4 py-3 text-foreground">
+                            {result.foundations.wbcType.dimText}
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">
+                            {result.foundations.wbcType.baseVolume.toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">
+                            {result.foundations.wbcType.muffVolume.toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">
+                            {result.foundations.wbcType.superBlockVolume > 0 ? (
+                              <span className="font-bold text-signal">
+                                {result.foundations.wbcType.superBlockVolume.toFixed(2)}
+                              </span>
+                            ) : (
+                              '—'
+                            )}
+                          </td>
+                          <td className="px-4 py-3 font-bold text-signal">
+                            {result.foundations.wbcType.totalVolume.toFixed(2)}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="flex items-center justify-between font-mono text-[10px] text-muted-foreground">
+                    <span>
+                      * Concrete Grade: M-15 / M-20 nominal mix per RDSO specification ETI/OHE/P/3131.
+                    </span>
+                    <span>
+                      Active FBM Code: <strong className="text-primary">{result.fbmCode}</strong>
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 2: Parameter breakdown */}
+              {activeTab === 'specifications' && (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded border border-border bg-panel p-4 space-y-2">
+                    <h4 className="text-xs font-bold uppercase text-foreground">Geometry & Clearance Summary</h4>
+                    <div className="space-y-1.5 font-mono text-xs text-muted-foreground">
+                      <div className="flex justify-between">
+                        <span>Setting Distance (Implantation):</span>
+                        <span className="text-foreground">{(implantation ?? 3.0).toFixed(2)} m</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>RDSO Tier Classification:</span>
+                        <span className="text-signal">{result.implantationTier}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Adaptor Chair (ETI/OHE/P/3131):</span>
+                        <span className="text-foreground">{result.requiresChair ? 'REQUIRED' : 'Not Required'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Cess Step Level (C):</span>
+                        <span className="text-foreground">{result.superBlock.stepC.toFixed(2)} m</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Super Block Status:</span>
+                        <span className={result.superBlock.required ? 'text-signal font-bold' : 'text-success'}>
+                          {result.superBlock.status}
+                        </span>
+                      </div>
+                      {result.superBlock.required && (
+                        <div className="flex justify-between">
+                          <span>Super Block Height:</span>
+                          <span className="text-signal font-bold">{result.superBlock.height.toFixed(2)} m</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <span>Alignment / Radius:</span>
+                        <span className="text-foreground">{alignment ?? 'N/A'} {alignment !== 'tangent' ? `(${radius} m)` : ''}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Calculated Versine:</span>
+                        <span className="text-foreground">{result.versine.toFixed(1)} mm</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded border border-border bg-panel p-4 space-y-2">
+                    <h4 className="text-xs font-bold uppercase text-foreground">Structure & Loading Details</h4>
+                    <div className="space-y-1.5 font-mono text-xs text-muted-foreground">
+                      <div className="flex justify-between">
+                        <span>Wind Pressure:</span>
+                        <span className="text-foreground">{wind ?? 'N/A'} kgf/m²</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Mast Role / Function:</span>
+                        <span className="text-foreground">{role ?? 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Resolved Mast Section:</span>
+                        <span className="text-primary font-bold">{result.mastSection}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Total Mast Length:</span>
+                        <span className="text-foreground">{result.mastLengthTotal} m</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Embedded in Foundation:</span>
+                        <span className="text-foreground">{result.mastLengthEmbedded} m</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Total Mast Below Rail Level:</span>
+                        <span className="text-foreground">{result.superBlock.mastBelowRL.toFixed(2)} m</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Height Above Top of Casting:</span>
+                        <span className="text-foreground">{result.mastLengthAbove} m</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Reverse Deflection:</span>
+                        <span className="text-signal font-bold">{result.deflectionDirection}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 3: Design Notes & Standard Drawing References */}
+              {activeTab === 'rdso-notes' && (
+                <div className="rounded border border-border bg-panel p-5 space-y-4 text-xs leading-relaxed text-muted-foreground">
+                  <div className="border-l-2 border-primary pl-3">
+                    <h5 className="font-bold text-foreground">Super Block Rules (ACTM Vol-II & Clause 3.5.14)</h5>
+                    <p className="mt-1">
+                      Whenever the Cess Step Level difference C exceeds 0.50 m (500 mm below Rail Level),
+                      the mast would be exposed to uncontained earth fill and overturning moment without lateral confinement.
+                      Clause 3.5.14 stipulates that the mast below Rail Level cannot exceed 1.850 m without casting a
+                      monolithic concrete Super Block. The Super Block height H_sb = C - 0.50 m brings the casting
+                      top back to within 500 mm of Rail Level.
+                    </p>
+                  </div>
+
+                  <div className="border-l-2 border-signal pl-3">
+                    <h5 className="font-bold text-foreground">Dynamic Mast Sizing & Reverse Deflection</h5>
+                    <p className="mt-1">
+                      Rolled beams (8"×6" RSJ or 6"×6" BFB) are deployed for straight tracks with light/medium wind loads (FBM 140)
+                      with +30 mm pre-camber away from the track. Curve or overlap central masts (OLC) auto-escalate to K-175 / K-200
+                      fabricated lattice trusses (FBM 260). Anchor masts (OLA/BWA) auto-escalate to heavy K-225 / K-250 fabricated trusses
+                      (FBM 374/389) with -30 mm reverse deflection towards the track to counteract the tension of the 45° guy wire anchor.
+                    </p>
+                  </div>
+
+                  <div className="border-l-2 border-border pl-3">
+                    <h5 className="font-bold text-foreground">Standard Drawing References</h5>
+                    <ul className="mt-1 list-disc list-inside space-y-1 font-mono text-[11px]">
+                      <li>ACTM Vol-II Part-I — Foundation casting, Super Block standards, and tolerances</li>
+                      <li>RDSO Drg ETI/OHE/P/3131 — General arrangement of OHE foundations and adaptation brackets</li>
+                      <li>RDSO Drg ETI/C/0058 — Volume charts for B, BG, and NG series foundations</li>
+                      <li>RDSO Drg ETI/C/0060 — NBC and WBC foundation designs for expansive Black Cotton soils</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+              {/* Verification & Legal Disclaimer */}
+              <div className="flex items-start gap-2.5 rounded border border-border/80 bg-panel-deep p-4 text-[11px] leading-relaxed text-muted-foreground">
+                <ShieldCheck className="mt-0.5 size-4 shrink-0 text-signal" />
+                <p>
+                  <strong className="text-foreground">Preliminary Engineering Tool:</strong> Values computed by this configurator are
+                  indicative selections based on published RDSO Employment Schedules, ACTM Vol-II, and Volume Charts. Site-specific soil investigation reports,
+                  certified structural load calculations, and approved Railway Division drawings must be verified prior to procurement or execution.
+                </p>
+              </div>
+            </section>
+          </main>
+        </div>
+
+        {/* Print Layout Sheet */}
+        <div className="print-sheet hidden p-8 font-mono text-xs">
+          <h1 className="text-lg font-bold">RDSO OHE MAST & FOUNDATION CONFIGURATION RECORD</h1>
+          <p className="mt-1 text-muted-foreground">Generated via RDSO OHE Engineering Workspace</p>
+          <hr className="my-4" />
+          <div className="space-y-2">
+            <p><strong>Wind Zone:</strong> {wind} kgf/m²</p>
+            <p><strong>Implantation:</strong> {(implantation ?? 3.0).toFixed(2)} m ({result.tierDescription})</p>
+            <p><strong>Cess Step Level (C):</strong> {result.superBlock.stepC.toFixed(2)} m ({result.superBlock.status})</p>
+            {result.superBlock.required && (
+              <p><strong>Super Block Height:</strong> {result.superBlock.height.toFixed(2)} m</p>
+            )}
+            <p><strong>Alignment:</strong> {alignment} (Radius: {radius} m, Span: {span} m, Versine: {result.versine} mm)</p>
+            <p><strong>Mast Function:</strong> {role}</p>
+            <p><strong>Resolved Mast:</strong> {result.mastSection}</p>
+            <p><strong>Reverse Deflection:</strong> {result.deflectionDirection}</p>
+            <p><strong>FBM Code:</strong> {result.fbmCode}</p>
+            <p><strong>B-Type Foundation:</strong> {result.foundations.bType.reference} ({result.foundations.bType.dimText}) — {result.foundations.bType.totalVolume} m³</p>
+            <p><strong>BG-Type Foundation:</strong> {result.foundations.bgType.reference} ({result.foundations.bgType.dimText}) — {result.foundations.bgType.totalVolume} m³</p>
+          </div>
+        </div>
+      </div>
+    </TooltipProvider>
+  );
 }
