@@ -18,7 +18,7 @@ import {
   HelpCircle,
   Layers,
   Layers3,
-  Maximize2,
+  LayoutGrid,
   Menu,
   RotateCcw,
   Ruler,
@@ -26,8 +26,10 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Sparkles,
+  Table as TableIcon,
   TrainFront,
   Wind,
+  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -57,10 +59,13 @@ export const Route = createFileRoute('/')({
         content:
           'Precision Indian Railways RDSO OHE mast selection, dynamic implantation, Cess Step Level (C), Super Block volumes, and multi-soil foundation matrix.',
       },
+      { name: 'viewport', content: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' },
     ],
   }),
   component: ConfiguratorPage,
 });
+
+type MobileTab = 'wizard' | 'viewport' | 'matrix';
 
 function StepHeader({
   number,
@@ -76,10 +81,10 @@ function StepHeader({
   active: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between border-b border-border/80 bg-panel px-5 py-3">
-      <div className="flex items-center gap-2.5">
+    <div className="flex items-center justify-between border-b border-border/80 bg-panel px-4 py-2.5 sm:px-5 sm:py-3">
+      <div className="flex items-center gap-2 sm:gap-2.5">
         <div
-          className={`flex size-6 items-center justify-center rounded-full font-mono text-[11px] font-bold transition-colors ${
+          className={`flex size-6 shrink-0 items-center justify-center rounded-full font-mono text-[11px] font-bold transition-colors ${
             completed
               ? 'bg-success text-success-foreground'
               : active
@@ -91,7 +96,7 @@ function StepHeader({
         </div>
         <div>
           <h3 className="text-xs font-bold uppercase tracking-wide text-foreground">{title}</h3>
-          {subtitle && <p className="font-mono text-[9px] text-muted-foreground">{subtitle}</p>}
+          {subtitle && <p className="line-clamp-1 font-mono text-[9px] text-muted-foreground">{subtitle}</p>}
         </div>
       </div>
       {completed ? (
@@ -136,9 +141,11 @@ function ConfiguratorPage() {
 
   const [sceneView, setSceneView] = useState<SceneView>('iso');
   const [wireframe, setWireframe] = useState<boolean>(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
+  const [mobileTab, setMobileTab] = useState<MobileTab>('wizard');
+  const [matrixDisplayMode, setMatrixDisplayMode] = useState<'cards' | 'table'>('cards');
   const [activeTab, setActiveTab] = useState<'matrix' | 'specifications' | 'rdso-notes'>('matrix');
+  const [mobileActionsOpen, setMobileActionsOpen] = useState<boolean>(false);
 
   // Sequential validation checks
   const step1Done = wind !== null;
@@ -210,20 +217,20 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="min-h-screen bg-background text-foreground antialiased">
+      <div className="min-h-screen bg-background text-foreground antialiased selection:bg-signal/20 selection:text-signal">
         {/* Top Navigation Bar */}
-        <header className="no-print relative z-30 flex h-16 items-center justify-between border-b border-border bg-panel-deep px-4 sm:px-6">
-          <div className="flex items-center gap-3">
-            <div className="flex size-9 items-center justify-center rounded bg-primary text-primary-foreground shadow-sm">
-              <TrainFront className="size-5" />
+        <header className="no-print relative z-30 flex h-14 items-center justify-between border-b border-border bg-panel-deep px-3 sm:h-16 sm:px-6">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded bg-primary text-primary-foreground shadow-sm sm:size-9">
+              <TrainFront className="size-4 sm:size-5" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="font-display text-base font-bold uppercase tracking-tight sm:text-lg">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <h1 className="font-display text-sm font-bold uppercase tracking-tight sm:text-lg">
                   RDSO <span className="text-signal">OHE</span> Configurator
                 </h1>
                 <Badge variant="outline" className="hidden border-border font-mono text-[9px] text-muted-foreground sm:inline-flex">
-                  V2.1 ACTM / RDSO
+                  V2.2 MOBILE
                 </Badge>
               </div>
               <p className="hidden font-mono text-[10px] text-muted-foreground sm:block">
@@ -232,8 +239,8 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="mr-2 hidden items-center gap-1.5 rounded-sm border border-border/80 bg-panel px-2.5 py-1 font-mono text-[10px] text-muted-foreground md:flex">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="mr-1 hidden items-center gap-1.5 rounded-sm border border-border/80 bg-panel px-2.5 py-1 font-mono text-[10px] text-muted-foreground lg:flex">
               <span
                 className={`size-2 rounded-full ${
                   allStepsComplete ? 'animate-pulse bg-success' : 'bg-signal'
@@ -246,7 +253,7 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
               variant="outline"
               size="sm"
               onClick={() => loadPreset('sample')}
-              className="hidden border-border bg-panel text-xs hover:border-primary/50 sm:inline-flex"
+              className="hidden border-border bg-panel text-xs hover:border-primary/50 md:inline-flex"
             >
               <Sparkles className="size-3.5 text-signal" /> Sample
             </Button>
@@ -255,7 +262,7 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
               variant="outline"
               size="sm"
               onClick={() => loadPreset('excess-step')}
-              className="hidden border-border bg-panel text-xs hover:border-signal/50 sm:inline-flex"
+              className="hidden border-border bg-panel text-xs hover:border-signal/50 lg:inline-flex"
               title="Test Cess Step C = 1.20m with Super Block"
             >
               <Box className="size-3.5 text-signal" /> Excess Step Demo
@@ -278,28 +285,134 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
               <ArrowDownToLine className="size-3.5" /> Print Sheet
             </Button>
 
+            {/* Mobile Actions Drawer Button */}
             <Button
               variant="outline"
               size="icon"
-              className="border-border bg-panel lg:hidden"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label="Toggle Menu"
+              className="size-8 border-border bg-panel lg:hidden"
+              onClick={() => setMobileActionsOpen(!mobileActionsOpen)}
+              aria-label="Mobile Actions Menu"
             >
-              <Menu className="size-4" />
+              {mobileActionsOpen ? <X className="size-4" /> : <Menu className="size-4" />}
             </Button>
           </div>
         </header>
 
-        {/* Main Application Layout */}
+        {/* Mobile Dropdown Action Bar (Collapsible on mobile) */}
+        {mobileActionsOpen && (
+          <div className="no-print border-b border-border bg-panel p-3 lg:hidden">
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  loadPreset('sample');
+                  setMobileActionsOpen(false);
+                }}
+                className="justify-start border-border bg-panel-deep text-xs"
+              >
+                <Sparkles className="size-3.5 text-signal mr-1.5" /> Standard Preset
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  loadPreset('excess-step');
+                  setMobileActionsOpen(false);
+                }}
+                className="justify-start border-border bg-panel-deep text-xs"
+              >
+                <Box className="size-3.5 text-signal mr-1.5" /> Excess Step (C=1.2m)
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  copyTechnicalSummary();
+                  setMobileActionsOpen(false);
+                }}
+                className="justify-start border-border bg-panel-deep text-xs"
+              >
+                <Copy className="size-3.5 mr-1.5" /> Copy Specification
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  reset();
+                  setMobileActionsOpen(false);
+                }}
+                className="justify-start border-border bg-panel-deep text-xs text-destructive hover:text-destructive"
+              >
+                <RotateCcw className="size-3.5 mr-1.5" /> Reset Wizard
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Mobile Dedicated Segmented Tab Bar (Visible on mobile/tablet screens < lg) */}
+        <div className="no-print sticky top-0 z-20 flex border-b border-border bg-panel-deep lg:hidden">
+          <button
+            type="button"
+            onClick={() => setMobileTab('wizard')}
+            className={`flex flex-1 items-center justify-center gap-1.5 border-b-2 py-2.5 text-center text-xs font-bold uppercase tracking-wider transition-colors ${
+              mobileTab === 'wizard'
+                ? 'border-signal bg-panel text-signal'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <SlidersHorizontal className="size-3.5" />
+            <span>Wizard</span>
+            <span className="rounded-full bg-panel-deep px-1.5 py-0.2 font-mono text-[9px]">
+              {[step1Done, step2Done, step3Done, step4Done].filter(Boolean).length}/4
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMobileTab('viewport')}
+            className={`flex flex-1 items-center justify-center gap-1.5 border-b-2 py-2.5 text-center text-xs font-bold uppercase tracking-wider transition-colors ${
+              mobileTab === 'viewport'
+                ? 'border-signal bg-panel text-signal'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Box className="size-3.5" />
+            <span>3D Twin</span>
+            {allStepsComplete && (
+              <span className="rounded-full bg-primary/20 px-1.5 py-0.2 font-mono text-[9px] text-primary">
+                3D
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMobileTab('matrix')}
+            className={`flex flex-1 items-center justify-center gap-1.5 border-b-2 py-2.5 text-center text-xs font-bold uppercase tracking-wider transition-colors ${
+              mobileTab === 'matrix'
+                ? 'border-signal bg-panel text-signal'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <FileSpreadsheet className="size-3.5" />
+            <span>Matrix</span>
+            <span className="rounded-full bg-signal-soft px-1.5 py-0.2 font-mono text-[9px] text-signal">
+              FBM {result.fbmCode}
+            </span>
+          </button>
+        </div>
+
+        {/* Main Application Layout (Responsive Split: Side-by-Side on Desktop, Tabbed on Mobile) */}
         <div className="no-print flex flex-col lg:h-[calc(100vh-64px)] lg:flex-row lg:overflow-hidden">
           {/* Left Column: Sequential Engineering Wizard */}
           <aside
             className={`w-full shrink-0 border-b border-border bg-panel lg:w-[470px] xl:w-[500px] lg:border-b-0 lg:border-r lg:overflow-y-auto ${
-              mobileMenuOpen ? 'block' : 'hidden lg:block'
+              mobileTab === 'wizard' ? 'block' : 'hidden lg:block'
             }`}
           >
-            {/* Wizard Header Status */}
-            <div className="sticky top-0 z-20 border-b border-border bg-panel/95 backdrop-blur-sm px-5 py-3">
+            {/* Wizard Desktop Header Status */}
+            <div className="sticky top-0 z-10 hidden border-b border-border bg-panel/95 backdrop-blur-sm px-5 py-3 lg:block">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <SlidersHorizontal className="size-4 text-primary" />
@@ -323,7 +436,7 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
               </div>
             </div>
 
-            <div className="divide-y divide-border">
+            <div className="divide-y divide-border pb-24 lg:pb-8">
               {/* STEP 1: Wind Pressure (RDSO / IS:875) */}
               <section className="bg-panel-deep/30">
                 <StepHeader
@@ -333,7 +446,7 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                   completed={step1Done}
                   active={!step1Done}
                 />
-                <div className="p-5">
+                <div className="p-3.5 sm:p-5">
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                     {windZones.map((zone) => {
                       const isSelected = wind === zone.value;
@@ -342,7 +455,7 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                           key={zone.value}
                           type="button"
                           onClick={() => setWind(zone.value)}
-                          className={`flex flex-col items-start rounded border p-2.5 text-left transition-all ${
+                          className={`flex min-h-[58px] flex-col items-start rounded border p-2.5 text-left transition-all active:scale-[0.98] ${
                             isSelected
                               ? 'border-signal bg-signal/10 ring-1 ring-signal'
                               : 'border-border bg-panel hover:border-border hover:bg-panel-deep'
@@ -383,17 +496,17 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                   completed={step2Done}
                   active={step1Done && !step2Done}
                 />
-                <div className="p-5 space-y-4">
+                <div className="p-3.5 sm:p-5 space-y-4">
                   {/* 1. Implantation Mode Cards */}
                   <div>
                     <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                       1. Implantation Selection
                     </label>
-                    <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="mt-2 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                       {/* Card A: Fixed Standard */}
                       <div
                         onClick={() => setImplantationMode('standard')}
-                        className={`cursor-pointer rounded border p-3 transition-all ${
+                        className={`cursor-pointer rounded border p-3 transition-all active:scale-[0.98] ${
                           implantationMode === 'standard' && (implantation ?? 3.0) === 3.0
                             ? 'border-primary bg-primary/10 ring-1 ring-primary'
                             : 'border-border bg-panel hover:bg-panel-deep'
@@ -414,7 +527,7 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                       {/* Card B: Dynamic Custom */}
                       <div
                         onClick={() => setImplantationMode('custom')}
-                        className={`cursor-pointer rounded border p-3 transition-all ${
+                        className={`cursor-pointer rounded border p-3 transition-all active:scale-[0.98] ${
                           implantationMode === 'custom'
                             ? 'border-primary bg-primary/10 ring-1 ring-primary'
                             : 'border-border bg-panel hover:bg-panel-deep'
@@ -455,7 +568,7 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                               setImplantation(val);
                             }
                           }}
-                          className="h-7 w-20 border-border bg-panel-deep text-right font-mono text-xs"
+                          className="h-8 w-20 border-border bg-panel-deep text-right font-mono text-xs"
                         />
                         <span className="font-mono text-xs text-muted-foreground">m</span>
                       </div>
@@ -473,10 +586,25 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                       className="py-1"
                     />
 
-                    <div className="flex justify-between font-mono text-[9px] text-muted-foreground">
-                      <span>Min: 3.00 m</span>
-                      <span className="font-bold text-signal">STEP: 0.05 m</span>
-                      <span>Max: 5.00 m</span>
+                    {/* Quick Touch Preset Buttons on Mobile */}
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {[3.0, 3.3, 3.5, 3.8, 4.2, 4.75].map((presetVal) => (
+                        <button
+                          key={presetVal}
+                          type="button"
+                          onClick={() => {
+                            setImplantationMode('custom');
+                            setImplantation(presetVal);
+                          }}
+                          className={`rounded border px-2 py-0.5 font-mono text-[9px] transition-colors ${
+                            (implantation ?? 3.0) === presetVal
+                              ? 'border-signal bg-signal/20 font-bold text-signal'
+                              : 'border-border bg-panel-deep text-muted-foreground hover:text-foreground'
+                          }`}
+                        >
+                          {presetVal.toFixed(2)}m
+                        </button>
+                      ))}
                     </div>
 
                     {/* Tier Flag Banner */}
@@ -526,7 +654,7 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                             const val = parseFloat(e.target.value);
                             if (!isNaN(val)) setStepLevel(val);
                           }}
-                          className="h-7 w-20 border-border bg-panel-deep text-right font-mono text-xs"
+                          className="h-8 w-20 border-border bg-panel-deep text-right font-mono text-xs"
                         />
                         <span className="font-mono text-xs text-muted-foreground">m</span>
                       </div>
@@ -541,10 +669,28 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                       className="py-1"
                     />
 
-                    <div className="flex items-center justify-between font-mono text-[9px] text-muted-foreground">
-                      <span>0.00 m (Flush)</span>
-                      <span className="font-bold text-signal">STANDARD: 0.50 m</span>
-                      <span>2.00 m (Deep)</span>
+                    {/* Quick Step Presets for Easy Mobile Selection */}
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {[
+                        { val: 0.0, label: '0.00m (Flush)' },
+                        { val: 0.5, label: '0.50m (Std)' },
+                        { val: 0.8, label: '0.80m' },
+                        { val: 1.2, label: '1.20m (Excess)' },
+                        { val: 1.6, label: '1.60m' },
+                      ].map((preset) => (
+                        <button
+                          key={preset.val}
+                          type="button"
+                          onClick={() => setStepLevel(preset.val)}
+                          className={`rounded border px-2 py-0.5 font-mono text-[9px] transition-colors ${
+                            stepLevel === preset.val
+                              ? 'border-signal bg-signal/20 font-bold text-signal'
+                              : 'border-border bg-panel-deep text-muted-foreground hover:text-foreground'
+                          }`}
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
                     </div>
 
                     {/* Engineering Threshold Status */}
@@ -637,11 +783,11 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                   completed={step3Done}
                   active={step2Done && !step3Done}
                 />
-                <div className="p-5 space-y-4">
+                <div className="p-3.5 sm:p-5 space-y-4">
                   {/* Segmented Control */}
                   <div className="grid grid-cols-3 gap-1 rounded border border-border bg-panel-deep p-1">
                     {[
-                      { key: 'tangent', label: 'Tangent (Straight)' },
+                      { key: 'tangent', label: 'Tangent' },
                       { key: 'inside', label: 'Inside Curve' },
                       { key: 'outside', label: 'Outside Curve' },
                     ].map((item) => (
@@ -649,7 +795,7 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                         key={item.key}
                         type="button"
                         onClick={() => setAlignment(item.key as Alignment)}
-                        className={`rounded py-2 text-[11px] font-semibold transition-all ${
+                        className={`rounded py-2 text-[11px] font-semibold transition-all active:scale-[0.98] ${
                           alignment === item.key
                             ? 'bg-primary text-primary-foreground shadow-sm'
                             : 'text-muted-foreground hover:text-foreground'
@@ -745,7 +891,7 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                   completed={step4Done}
                   active={step3Done && !step4Done}
                 />
-                <div className="p-5">
+                <div className="p-3.5 sm:p-5">
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                     {roles.map((r) => {
                       const isSelected = role === r.value;
@@ -754,7 +900,7 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                           key={r.value}
                           type="button"
                           onClick={() => setRole(r.value)}
-                          className={`flex flex-col items-start rounded border p-2.5 text-left transition-all ${
+                          className={`flex min-h-[72px] flex-col items-start rounded border p-2.5 text-left transition-all active:scale-[0.98] ${
                             isSelected
                               ? 'border-signal bg-signal/10 ring-1 ring-signal shadow-sm'
                               : 'border-border bg-panel hover:border-border hover:bg-panel-deep'
@@ -775,38 +921,74 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                 </div>
               </section>
             </div>
+
+            {/* Mobile Sticky Floating Summary Pill (Shown when on Wizard tab on mobile) */}
+            <div className="no-print fixed bottom-0 left-0 right-0 z-20 flex items-center justify-between border-t border-border bg-panel/95 p-2.5 backdrop-blur-md lg:hidden">
+              <div className="min-w-0 pr-2 font-mono text-[10px] leading-tight">
+                <div className="truncate font-bold text-foreground">{result.mastSection}</div>
+                <div className="text-muted-foreground">
+                  FBM <span className="text-signal font-semibold">{result.fbmCode}</span> · C:{' '}
+                  <span className="text-foreground">{result.superBlock.stepC.toFixed(2)}m</span>
+                </div>
+              </div>
+              <div className="flex gap-1.5 shrink-0">
+                <Button
+                  size="sm"
+                  onClick={() => setMobileTab('viewport')}
+                  className="h-8 bg-primary px-2.5 text-xs text-primary-foreground"
+                >
+                  <Box className="size-3.5 mr-1" /> View 3D
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setMobileTab('matrix')}
+                  className="h-8 border-border bg-panel-deep px-2.5 text-xs"
+                >
+                  <FileSpreadsheet className="size-3.5 mr-1" /> Matrix
+                </Button>
+              </div>
+            </div>
           </aside>
 
           {/* Right Column: 3D Viewport and Dynamic Foundation Matrix */}
-          <main className="flex min-w-0 flex-1 flex-col overflow-y-auto bg-background">
+          <main
+            className={`flex min-w-0 flex-1 flex-col overflow-y-auto bg-background ${
+              mobileTab === 'wizard' ? 'hidden lg:flex' : 'flex'
+            }`}
+          >
             {/* 3D Scene Viewport / Conditional Blueprint Card */}
-            <section className="relative flex h-[420px] shrink-0 flex-col overflow-hidden border-b border-border bg-[#0d1520] lg:h-[480px]">
+            <section
+              className={`relative flex shrink-0 flex-col overflow-hidden border-b border-border bg-[#0d1520] ${
+                mobileTab === 'viewport' ? 'h-[calc(100vh-120px)] lg:h-[480px]' : 'h-[360px] lg:h-[460px]'
+              }`}
+            >
               {/* Header Bar over Viewport */}
-              <div className="relative z-10 flex items-center justify-between border-b border-border/80 bg-panel-deep/80 px-4 py-2.5 backdrop-blur-md">
+              <div className="relative z-10 flex flex-wrap items-center justify-between gap-2 border-b border-border/80 bg-panel-deep/85 px-3 py-2 backdrop-blur-md sm:px-4 sm:py-2.5">
                 <div className="flex items-center gap-2">
                   <Box className="size-4 text-primary" />
                   <span className="text-xs font-bold uppercase tracking-wider text-foreground">
                     3D Digital Twin Viewport
                   </span>
                   {allStepsComplete && (
-                    <Badge variant="outline" className="ml-2 border-primary/30 bg-primary/10 font-mono text-[9px] text-primary">
+                    <Badge variant="outline" className="hidden sm:inline-flex border-primary/30 bg-primary/10 font-mono text-[9px] text-primary">
                       {result.mastSection}
                     </Badge>
                   )}
                   {allStepsComplete && result.superBlock.required && (
                     <Badge variant="outline" className="border-signal/40 bg-signal-soft font-mono text-[9px] text-signal">
-                      SUPER BLOCK: {result.superBlock.height.toFixed(2)}m
+                      SB: {result.superBlock.height.toFixed(2)}m
                     </Badge>
                   )}
                 </div>
 
                 {allStepsComplete && (
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1 sm:gap-1.5">
                     {/* View preset buttons */}
                     <div className="flex items-center rounded border border-border bg-panel p-0.5">
                       {(
                         [
-                          ['iso', 'Isometric'],
+                          ['iso', 'Iso'],
                           ['front', 'Front'],
                           ['side', 'Side'],
                           ['top', 'Top'],
@@ -816,7 +998,7 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                           key={v}
                           type="button"
                           onClick={() => setSceneView(v)}
-                          className={`rounded px-2 py-1 text-[10px] font-medium transition-colors ${
+                          className={`rounded px-1.5 py-0.5 text-[9px] font-medium transition-colors sm:px-2 sm:py-1 sm:text-[10px] ${
                             sceneView === v ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
                           }`}
                         >
@@ -830,10 +1012,11 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                       variant={wireframe ? 'secondary' : 'outline'}
                       size="sm"
                       onClick={() => setWireframe(!wireframe)}
-                      className="h-7 border-border px-2 text-[10px]"
+                      className="h-6 sm:h-7 border-border px-1.5 sm:px-2 text-[9px] sm:text-[10px]"
                       title="Toggle Wireframe mode"
                     >
-                      <Eye className="size-3 mr-1" /> Wireframe
+                      <Eye className="size-3 sm:mr-1" />
+                      <span className="hidden sm:inline">Wireframe</span>
                     </Button>
                   </div>
                 )}
@@ -865,88 +1048,91 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                       wireframe={wireframe}
                     />
 
-                    {/* Overlay HUD Readouts */}
-                    <div className="pointer-events-none absolute bottom-4 left-4 flex flex-wrap gap-2">
-                      <div className="flex items-center gap-2 rounded border border-border bg-panel-deep/90 px-3 py-1.5 font-mono text-[10px] text-foreground backdrop-blur-sm">
-                        <Crosshair className="size-3.5 text-signal" />
-                        IMPLANTATION: <span className="font-bold text-signal">{(implantation ?? 3.0).toFixed(2)} m</span>
+                    {/* Overlay HUD Readouts (Mobile Compact) */}
+                    <div className="pointer-events-none absolute bottom-3 left-3 right-3 flex flex-wrap gap-1.5 sm:bottom-4 sm:left-4 sm:right-auto sm:gap-2">
+                      <div className="flex items-center gap-1.5 rounded border border-border bg-panel-deep/90 px-2 py-1 font-mono text-[9px] text-foreground backdrop-blur-sm sm:px-3 sm:py-1.5 sm:text-[10px]">
+                        <Crosshair className="size-3 text-signal" />
+                        IMP: <span className="font-bold text-signal">{(implantation ?? 3.0).toFixed(2)}m</span>
                       </div>
-                      <div className="flex items-center gap-2 rounded border border-border bg-panel-deep/90 px-3 py-1.5 font-mono text-[10px] text-foreground backdrop-blur-sm">
-                        STEP (C): <span className="font-bold text-signal">{result.superBlock.stepC.toFixed(2)} m</span>
+                      <div className="flex items-center gap-1.5 rounded border border-border bg-panel-deep/90 px-2 py-1 font-mono text-[9px] text-foreground backdrop-blur-sm sm:px-3 sm:py-1.5 sm:text-[10px]">
+                        STEP C: <span className="font-bold text-signal">{result.superBlock.stepC.toFixed(2)}m</span>
                       </div>
-                      <div className="flex items-center gap-2 rounded border border-border bg-panel-deep/90 px-3 py-1.5 font-mono text-[10px] text-foreground backdrop-blur-sm">
+                      <div className="flex items-center gap-1.5 rounded border border-border bg-panel-deep/90 px-2 py-1 font-mono text-[9px] text-foreground backdrop-blur-sm sm:px-3 sm:py-1.5 sm:text-[10px]">
+                        FBM: <span className="font-bold text-primary">{result.fbmCode}</span>
+                      </div>
+                      <div className="hidden items-center gap-1.5 rounded border border-border bg-panel-deep/90 px-2.5 py-1 font-mono text-[9px] text-foreground backdrop-blur-sm sm:flex">
                         DEFLECTION: <span className="font-bold text-signal">{result.deflectionDirection}</span>
-                      </div>
-                      <div className="flex items-center gap-2 rounded border border-border bg-panel-deep/90 px-3 py-1.5 font-mono text-[10px] text-foreground backdrop-blur-sm">
-                        FBM CODE: <span className="font-bold text-signal">{result.fbmCode}</span>
                       </div>
                     </div>
 
-                    <div className="pointer-events-none absolute bottom-4 right-4 hidden rounded border border-border bg-panel-deep/80 px-2.5 py-1 font-mono text-[9px] text-muted-foreground backdrop-blur-sm sm:block">
-                      ORBIT: Left Click + Drag · PAN: Right Click · ZOOM: Scroll
+                    <div className="pointer-events-none absolute top-12 right-3 hidden rounded border border-border bg-panel-deep/80 px-2 py-1 font-mono text-[9px] text-muted-foreground backdrop-blur-sm lg:block">
+                      ORBIT: Drag · PAN: Right Click · ZOOM: Scroll
                     </div>
                   </Suspense>
                 ) : (
                   /* High-End Technical Blueprint Empty State */
-                  <div className="relative flex h-full flex-col items-center justify-center p-8 text-center">
+                  <div className="relative flex h-full flex-col items-center justify-center p-4 text-center sm:p-8">
                     <div className="pointer-events-none absolute inset-0 opacity-15 technical-grid" />
 
-                    <div className="relative z-10 max-w-md rounded-lg border border-border/80 bg-panel-deep/90 p-6 shadow-2xl backdrop-blur-md">
-                      <div className="mx-auto flex size-12 items-center justify-center rounded-full border border-primary/40 bg-primary/10 text-primary">
-                        <Layers className="size-6 animate-pulse" />
+                    <div className="relative z-10 max-w-md rounded-lg border border-border/80 bg-panel-deep/90 p-4 shadow-2xl backdrop-blur-md sm:p-6">
+                      <div className="mx-auto flex size-10 items-center justify-center rounded-full border border-primary/40 bg-primary/10 text-primary sm:size-12">
+                        <Layers className="size-5 animate-pulse sm:size-6" />
                       </div>
 
-                      <h3 className="mt-4 text-sm font-bold uppercase tracking-wider text-foreground">
+                      <h3 className="mt-3 text-xs font-bold uppercase tracking-wider text-foreground sm:text-sm">
                         Awaiting Configuration Parameters
                       </h3>
-                      <p className="mt-1 text-xs text-muted-foreground">
+                      <p className="mt-1 text-[11px] text-muted-foreground sm:text-xs">
                         Configure Wind Pressure, Implantation, Cess Step Level (C), Alignment, and Mast Function to
                         generate 3D Digital Twin and Foundation Matrix.
                       </p>
 
                       {/* Step completion pills */}
-                      <div className="mt-4 grid grid-cols-2 gap-2 text-left font-mono text-[10px]">
+                      <div className="mt-3 grid grid-cols-2 gap-1.5 text-left font-mono text-[9px] sm:gap-2 sm:text-[10px]">
                         <div
-                          className={`flex items-center gap-1.5 rounded border px-2.5 py-1.5 ${
+                          className={`flex items-center gap-1 rounded border px-2 py-1 ${
                             step1Done ? 'border-success/40 bg-success/10 text-success' : 'border-border bg-panel text-muted-foreground'
                           }`}
                         >
-                          <CircleDot className="size-3" />
-                          <span>1. Wind: {wind ? `${wind} kgf/m²` : 'Pending'}</span>
+                          <CircleDot className="size-2.5" />
+                          <span className="truncate">1. Wind: {wind ? `${wind}kg` : 'Pending'}</span>
                         </div>
 
                         <div
-                          className={`flex items-center gap-1.5 rounded border px-2.5 py-1.5 ${
+                          className={`flex items-center gap-1 rounded border px-2 py-1 ${
                             step2Done ? 'border-success/40 bg-success/10 text-success' : 'border-border bg-panel text-muted-foreground'
                           }`}
                         >
-                          <CircleDot className="size-3" />
-                          <span>2. Imp/Cess: {implantation ? `${implantation.toFixed(2)}m (C=${stepLevel.toFixed(2)}m)` : 'Pending'}</span>
+                          <CircleDot className="size-2.5" />
+                          <span className="truncate">2. Imp: {implantation ? `${implantation.toFixed(2)}m` : 'Pending'}</span>
                         </div>
 
                         <div
-                          className={`flex items-center gap-1.5 rounded border px-2.5 py-1.5 ${
+                          className={`flex items-center gap-1 rounded border px-2 py-1 ${
                             step3Done ? 'border-success/40 bg-success/10 text-success' : 'border-border bg-panel text-muted-foreground'
                           }`}
                         >
-                          <CircleDot className="size-3" />
-                          <span>3. Alignment: {alignment ? alignment : 'Pending'}</span>
+                          <CircleDot className="size-2.5" />
+                          <span className="truncate">3. Align: {alignment ? alignment : 'Pending'}</span>
                         </div>
 
                         <div
-                          className={`flex items-center gap-1.5 rounded border px-2.5 py-1.5 ${
+                          className={`flex items-center gap-1 rounded border px-2 py-1 ${
                             step4Done ? 'border-success/40 bg-success/10 text-success' : 'border-border bg-panel text-muted-foreground'
                           }`}
                         >
-                          <CircleDot className="size-3" />
-                          <span>4. Function: {role ? role : 'Pending'}</span>
+                          <CircleDot className="size-2.5" />
+                          <span className="truncate">4. Mast: {role ? role : 'Pending'}</span>
                         </div>
                       </div>
 
-                      <div className="mt-5 flex justify-center gap-2">
+                      <div className="mt-4 flex justify-center gap-2">
                         <Button
                           size="sm"
-                          onClick={() => loadPreset('sample')}
+                          onClick={() => {
+                            loadPreset('sample');
+                            setMobileTab('viewport');
+                          }}
                           className="bg-primary text-primary-foreground text-xs"
                         >
                           <Sparkles className="size-3.5 mr-1" /> Load Standard Setup
@@ -959,70 +1145,74 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
             </section>
 
             {/* Dynamic Structural Cascade & Multi-Soil Dynamic Foundation Matrix */}
-            <section className="p-4 sm:p-6 space-y-6">
+            <section
+              className={`p-3.5 sm:p-6 space-y-4 sm:space-y-6 ${
+                mobileTab === 'viewport' ? 'hidden lg:block' : 'block'
+              }`}
+            >
               {/* Output Engine Summary Cards */}
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                <div className="rounded border border-border bg-panel p-3.5">
+              <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-4">
+                <div className="rounded border border-border bg-panel p-3">
                   <div className="flex items-center justify-between text-muted-foreground">
                     <span className="text-[10px] font-bold uppercase">Recommended Mast</span>
-                    <Layers3 className="size-4 text-primary" />
+                    <Layers3 className="size-3.5 text-primary" />
                   </div>
-                  <div className="mt-2 font-display text-base font-bold text-foreground">
+                  <div className="mt-1 font-display text-sm font-bold text-foreground sm:text-base">
                     {result.mastSection}
                   </div>
-                  <div className="mt-1 font-mono text-[9px] text-muted-foreground">
+                  <div className="mt-0.5 line-clamp-1 font-mono text-[9px] text-muted-foreground">
                     Total: {result.mastLengthTotal}m · Embed: {result.mastLengthEmbedded}m
                     {result.superBlock.required && ` + ${result.superBlock.height.toFixed(2)}m SB`}
                   </div>
                 </div>
 
-                <div className="rounded border border-border bg-panel p-3.5">
+                <div className="rounded border border-border bg-panel p-3">
                   <div className="flex items-center justify-between text-muted-foreground">
                     <span className="text-[10px] font-bold uppercase">Reverse Deflection</span>
-                    <Compass className="size-4 text-signal" />
+                    <Compass className="size-3.5 text-signal" />
                   </div>
-                  <div className="mt-2 font-display text-base font-bold text-signal">
+                  <div className="mt-1 font-display text-sm font-bold text-signal sm:text-base">
                     {result.deflectionDirection}
                   </div>
-                  <div className="mt-1 font-mono text-[9px] text-muted-foreground">
+                  <div className="mt-0.5 line-clamp-1 font-mono text-[9px] text-muted-foreground">
                     {role === 'OLA/BWA' ? 'Guy wire anchor counter-deflection' : 'Cantilever load pre-camber'}
                   </div>
                 </div>
 
-                <div className="rounded border border-border bg-panel p-3.5">
+                <div className="rounded border border-border bg-panel p-3">
                   <div className="flex items-center justify-between text-muted-foreground">
                     <span className="text-[10px] font-bold uppercase">FBM Code (RDSO)</span>
-                    <Gauge className="size-4 text-primary" />
+                    <Gauge className="size-3.5 text-primary" />
                   </div>
-                  <div className="mt-2 font-display text-xl font-bold text-primary">
+                  <div className="mt-1 font-display text-lg font-bold text-primary sm:text-xl">
                     {result.fbmCode}
                   </div>
-                  <div className="mt-1 font-mono text-[9px] text-muted-foreground">
-                    Foundation Bending Moment Schedule Code
+                  <div className="mt-0.5 font-mono text-[9px] text-muted-foreground">
+                    RDSO Schedule Code
                   </div>
                 </div>
 
-                <div className="rounded border border-border bg-panel p-3.5">
+                <div className="rounded border border-border bg-panel p-3">
                   <div className="flex items-center justify-between text-muted-foreground">
                     <span className="text-[10px] font-bold uppercase">Cess Step & Super Block</span>
-                    <Box className="size-4 text-signal" />
+                    <Box className="size-3.5 text-signal" />
                   </div>
-                  <div className="mt-2 font-display text-base font-bold text-foreground">
+                  <div className="mt-1 font-display text-sm font-bold text-foreground sm:text-base">
                     {result.superBlock.required ? `H = ${result.superBlock.height.toFixed(2)} m` : 'Standard Step'}
                   </div>
-                  <div className="mt-1 font-mono text-[9px] text-muted-foreground">
-                    C = {result.superBlock.stepC.toFixed(2)} m (RL to Foundation Top)
+                  <div className="mt-0.5 font-mono text-[9px] text-muted-foreground">
+                    C = {result.superBlock.stepC.toFixed(2)} m (RL to Fdn Top)
                   </div>
                 </div>
               </div>
 
-              {/* Navigation Tabs */}
-              <div className="flex items-center justify-between border-b border-border">
-                <div className="flex gap-4">
+              {/* Navigation Tabs & Display Toggle */}
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border">
+                <div className="flex gap-2 sm:gap-4 overflow-x-auto no-scrollbar">
                   {[
-                    { id: 'matrix', label: 'Multi-Soil Dynamic Foundation Matrix', icon: FileSpreadsheet },
-                    { id: 'specifications', label: 'Engineering Schedule Parameters', icon: Activity },
-                    { id: 'rdso-notes', label: 'RDSO & ACTM Design Notes', icon: ShieldCheck },
+                    { id: 'matrix', label: 'Foundation Matrix', icon: FileSpreadsheet },
+                    { id: 'specifications', label: 'Schedule Specs', icon: Activity },
+                    { id: 'rdso-notes', label: 'ACTM Notes', icon: ShieldCheck },
                   ].map((tab) => {
                     const Icon = tab.icon;
                     return (
@@ -1030,7 +1220,7 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                         key={tab.id}
                         type="button"
                         onClick={() => setActiveTab(tab.id as any)}
-                        className={`flex items-center gap-1.5 border-b-2 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors ${
+                        className={`flex items-center gap-1.5 border-b-2 py-2 text-xs font-bold uppercase tracking-wider transition-colors shrink-0 ${
                           activeTab === tab.id
                             ? 'border-signal text-signal'
                             : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -1043,211 +1233,306 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                   })}
                 </div>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={copyTechnicalSummary}
-                  className="h-8 border-border bg-panel text-xs"
-                >
-                  {copied ? <Check className="size-3.5 text-success mr-1" /> : <Copy className="size-3.5 mr-1" />}
-                  {copied ? 'Copied to Clipboard' : 'Copy Spec'}
-                </Button>
+                <div className="flex items-center gap-2 pb-1 sm:pb-0">
+                  {/* Cards vs Table View toggle for mobile/tablet */}
+                  {activeTab === 'matrix' && (
+                    <div className="flex items-center rounded border border-border bg-panel p-0.5">
+                      <button
+                        type="button"
+                        onClick={() => setMatrixDisplayMode('cards')}
+                        className={`rounded px-2 py-1 text-[10px] font-medium transition-colors ${
+                          matrixDisplayMode === 'cards'
+                            ? 'bg-primary text-primary-foreground'
+                            : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                        title="Card view (optimized for mobile)"
+                      >
+                        <LayoutGrid className="size-3 mr-1 inline" /> Cards
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setMatrixDisplayMode('table')}
+                        className={`rounded px-2 py-1 text-[10px] font-medium transition-colors ${
+                          matrixDisplayMode === 'table'
+                            ? 'bg-primary text-primary-foreground'
+                            : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                        title="Tabular data view"
+                      >
+                        <TableIcon className="size-3 mr-1 inline" /> Table
+                      </button>
+                    </div>
+                  )}
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={copyTechnicalSummary}
+                    className="h-7 sm:h-8 border-border bg-panel text-[11px] sm:text-xs"
+                  >
+                    {copied ? <Check className="size-3 text-success mr-1" /> : <Copy className="size-3 mr-1" />}
+                    {copied ? 'Copied' : 'Copy'}
+                  </Button>
+                </div>
               </div>
 
-              {/* Tab 1: Multi-Soil Dynamic Foundation Matrix Table (7 Columns strictly per spec) */}
+              {/* Tab 1: Multi-Soil Dynamic Foundation Matrix */}
               {activeTab === 'matrix' && (
                 <div className="space-y-4">
-                  <div className="overflow-x-auto rounded border border-border bg-panel">
-                    <table className="w-full min-w-[760px] text-left text-xs">
-                      <thead className="border-b border-border bg-panel-deep font-mono text-[10px] uppercase text-muted-foreground">
-                        <tr>
-                          <th className="px-4 py-3">RDSO Reference / Soil Type</th>
-                          <th className="px-4 py-3">Foundation Code</th>
-                          <th className="px-4 py-3">Dimensions (A × B × H in meters)</th>
-                          <th className="px-4 py-3">Base Vol (m³)</th>
-                          <th className="px-4 py-3">Muff Vol (m³)</th>
-                          <th className="px-4 py-3">Super Block (m³)</th>
-                          <th className="px-4 py-3 font-bold text-signal">Total Vol (m³)</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border font-mono text-[11px]">
-                        {/* Row 1: B-Type */}
-                        <tr className="hover:bg-panel-deep/50 transition-colors">
-                          <td className="px-4 py-3">
-                            <strong className="text-foreground">B-Type (Side Bearing)</strong>
-                            <span className="block font-sans text-[9px] text-muted-foreground">
-                              {result.foundations.bType.soilName} ({result.foundations.bType.bearingCapacity})
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 font-bold text-primary">
-                            {result.foundations.bType.reference}
-                          </td>
-                          <td className="px-4 py-3 text-foreground">
-                            {result.foundations.bType.dimText}
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground">
-                            {result.foundations.bType.baseVolume.toFixed(2)}
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground">
-                            {result.foundations.bType.muffVolume.toFixed(2)}
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground">
-                            {result.foundations.bType.superBlockVolume > 0 ? (
-                              <span className="font-bold text-signal">
-                                {result.foundations.bType.superBlockVolume.toFixed(2)}
-                              </span>
-                            ) : (
-                              '—'
-                            )}
-                          </td>
-                          <td className="px-4 py-3 font-bold text-signal">
-                            {result.foundations.bType.totalVolume.toFixed(2)}
-                          </td>
-                        </tr>
+                  {/* Mode A: Responsive Mobile Cards View (Best UX on small screens!) */}
+                  {matrixDisplayMode === 'cards' ? (
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {[
+                        result.foundations.bType,
+                        result.foundations.bgType,
+                        result.foundations.ngType,
+                        result.foundations.nbcType,
+                        result.foundations.wbcType,
+                      ].map((item) => (
+                        <div
+                          key={item.type}
+                          className="rounded-lg border border-border bg-panel p-3.5 space-y-2.5 transition-all hover:border-border/80 shadow-sm"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <div className="font-display text-xs font-bold uppercase text-foreground">
+                                {item.type} ({item.name.replace(' Foundation', '')})
+                              </div>
+                              <div className="text-[10px] text-muted-foreground">{item.soilName}</div>
+                            </div>
+                            <Badge variant="outline" className="border-primary/40 bg-primary/10 font-mono text-[10px] text-primary">
+                              {item.reference}
+                            </Badge>
+                          </div>
 
-                        {/* Row 2: BG-Type */}
-                        <tr className="hover:bg-panel-deep/50 transition-colors bg-panel-deep/20">
-                          <td className="px-4 py-3">
-                            <strong className="text-foreground">BG-Type (Side Gravity)</strong>
-                            <span className="block font-sans text-[9px] text-muted-foreground">
-                              {result.foundations.bgType.soilName} (Slope step C = {result.superBlock.stepC.toFixed(2)}m)
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 font-bold text-primary">
-                            {result.foundations.bgType.reference}
-                          </td>
-                          <td className="px-4 py-3 text-foreground">
-                            {result.foundations.bgType.dimText}
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground">
-                            {result.foundations.bgType.baseVolume.toFixed(2)}
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground">
-                            {result.foundations.bgType.muffVolume.toFixed(2)}
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground">
-                            {result.foundations.bgType.superBlockVolume > 0 ? (
-                              <span className="font-bold text-signal">
-                                {result.foundations.bgType.superBlockVolume.toFixed(2)}
-                              </span>
-                            ) : (
-                              '—'
-                            )}
-                          </td>
-                          <td className="px-4 py-3 font-bold text-signal">
-                            {result.foundations.bgType.totalVolume.toFixed(2)}
-                          </td>
-                        </tr>
+                          <div className="rounded bg-panel-deep p-2 border border-border/80 space-y-1 font-mono text-[10px]">
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Dimensions:</span>
+                              <span className="font-semibold text-foreground">{item.dimText}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Soil SBC:</span>
+                              <span className="text-foreground">{item.bearingCapacity}</span>
+                            </div>
+                          </div>
 
-                        {/* Row 3: NG-Type */}
-                        <tr className="hover:bg-panel-deep/50 transition-colors">
-                          <td className="px-4 py-3">
-                            <strong className="text-foreground">NG-Type (Pure Gravity)</strong>
-                            <span className="block font-sans text-[9px] text-muted-foreground">
-                              {result.foundations.ngType.soilName} ({result.foundations.ngType.bearingCapacity})
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 font-bold text-primary">
-                            {result.foundations.ngType.reference}
-                          </td>
-                          <td className="px-4 py-3 text-foreground">
-                            {result.foundations.ngType.dimText}
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground">
-                            {result.foundations.ngType.baseVolume.toFixed(2)}
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground">
-                            {result.foundations.ngType.muffVolume.toFixed(2)}
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground">
-                            {result.foundations.ngType.superBlockVolume > 0 ? (
-                              <span className="font-bold text-signal">
-                                {result.foundations.ngType.superBlockVolume.toFixed(2)}
-                              </span>
-                            ) : (
-                              '—'
-                            )}
-                          </td>
-                          <td className="px-4 py-3 font-bold text-signal">
-                            {result.foundations.ngType.totalVolume.toFixed(2)}
-                          </td>
-                        </tr>
+                          <div className="grid grid-cols-3 gap-1 rounded bg-panel-deep p-2 border border-border text-center font-mono text-[9px]">
+                            <div>
+                              <span className="text-muted-foreground block">Base Vol</span>
+                              <strong className="text-foreground">{item.baseVolume.toFixed(2)}m³</strong>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground block">Super Block</span>
+                              <strong className={item.superBlockVolume > 0 ? 'text-signal' : 'text-muted-foreground'}>
+                                {item.superBlockVolume > 0 ? `${item.superBlockVolume.toFixed(2)}m³` : '0m³'}
+                              </strong>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground block">Total Vol</span>
+                              <strong className="text-signal text-[11px] font-bold">
+                                {item.totalVolume.toFixed(2)}m³
+                              </strong>
+                            </div>
+                          </div>
 
-                        {/* Row 4: NBC-Type */}
-                        <tr className="hover:bg-panel-deep/50 transition-colors">
-                          <td className="px-4 py-3">
-                            <strong className="text-foreground">NBC-Type (Dry Black Cotton)</strong>
-                            <span className="block font-sans text-[9px] text-muted-foreground">
-                              {result.foundations.nbcType.soilName} ({result.foundations.nbcType.bearingCapacity})
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 font-bold text-primary">
-                            {result.foundations.nbcType.reference}
-                          </td>
-                          <td className="px-4 py-3 text-foreground">
-                            {result.foundations.nbcType.dimText}
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground">
-                            {result.foundations.nbcType.baseVolume.toFixed(2)}
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground">
-                            {result.foundations.nbcType.muffVolume.toFixed(2)}
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground">
-                            {result.foundations.nbcType.superBlockVolume > 0 ? (
-                              <span className="font-bold text-signal">
-                                {result.foundations.nbcType.superBlockVolume.toFixed(2)}
+                          <p className="line-clamp-2 text-[9px] text-muted-foreground italic leading-tight">
+                            {item.features}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    /* Mode B: Full 7-Column Tabular View (with touch-friendly scroll) */
+                    <div className="overflow-x-auto rounded border border-border bg-panel">
+                      <table className="w-full min-w-[760px] text-left text-xs">
+                        <thead className="border-b border-border bg-panel-deep font-mono text-[10px] uppercase text-muted-foreground">
+                          <tr>
+                            <th className="px-4 py-3">RDSO Reference / Soil Type</th>
+                            <th className="px-4 py-3">Foundation Code</th>
+                            <th className="px-4 py-3">Dimensions (A × B × H in meters)</th>
+                            <th className="px-4 py-3">Base Vol (m³)</th>
+                            <th className="px-4 py-3">Muff Vol (m³)</th>
+                            <th className="px-4 py-3">Super Block (m³)</th>
+                            <th className="px-4 py-3 font-bold text-signal">Total Vol (m³)</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border font-mono text-[11px]">
+                          {/* Row 1: B-Type */}
+                          <tr className="hover:bg-panel-deep/50 transition-colors">
+                            <td className="px-4 py-3">
+                              <strong className="text-foreground">B-Type (Side Bearing)</strong>
+                              <span className="block font-sans text-[9px] text-muted-foreground">
+                                {result.foundations.bType.soilName} ({result.foundations.bType.bearingCapacity})
                               </span>
-                            ) : (
-                              '—'
-                            )}
-                          </td>
-                          <td className="px-4 py-3 font-bold text-signal">
-                            {result.foundations.nbcType.totalVolume.toFixed(2)}
-                          </td>
-                        </tr>
+                            </td>
+                            <td className="px-4 py-3 font-bold text-primary">
+                              {result.foundations.bType.reference}
+                            </td>
+                            <td className="px-4 py-3 text-foreground">
+                              {result.foundations.bType.dimText}
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {result.foundations.bType.baseVolume.toFixed(2)}
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {result.foundations.bType.muffVolume.toFixed(2)}
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {result.foundations.bType.superBlockVolume > 0 ? (
+                                <span className="font-bold text-signal">
+                                  {result.foundations.bType.superBlockVolume.toFixed(2)}
+                                </span>
+                              ) : (
+                                '—'
+                              )}
+                            </td>
+                            <td className="px-4 py-3 font-bold text-signal">
+                              {result.foundations.bType.totalVolume.toFixed(2)}
+                            </td>
+                          </tr>
 
-                        {/* Row 5: WBC-Type */}
-                        <tr className="hover:bg-panel-deep/50 transition-colors">
-                          <td className="px-4 py-3">
-                            <strong className="text-foreground">WBC-Type (Wet Black Cotton)</strong>
-                            <span className="block font-sans text-[9px] text-muted-foreground">
-                              {result.foundations.wbcType.soilName} ({result.foundations.wbcType.bearingCapacity})
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 font-bold text-primary">
-                            {result.foundations.wbcType.reference}
-                          </td>
-                          <td className="px-4 py-3 text-foreground">
-                            {result.foundations.wbcType.dimText}
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground">
-                            {result.foundations.wbcType.baseVolume.toFixed(2)}
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground">
-                            {result.foundations.wbcType.muffVolume.toFixed(2)}
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground">
-                            {result.foundations.wbcType.superBlockVolume > 0 ? (
-                              <span className="font-bold text-signal">
-                                {result.foundations.wbcType.superBlockVolume.toFixed(2)}
+                          {/* Row 2: BG-Type */}
+                          <tr className="hover:bg-panel-deep/50 transition-colors bg-panel-deep/20">
+                            <td className="px-4 py-3">
+                              <strong className="text-foreground">BG-Type (Side Gravity)</strong>
+                              <span className="block font-sans text-[9px] text-muted-foreground">
+                                {result.foundations.bgType.soilName} (Slope step C = {result.superBlock.stepC.toFixed(2)}m)
                               </span>
-                            ) : (
-                              '—'
-                            )}
-                          </td>
-                          <td className="px-4 py-3 font-bold text-signal">
-                            {result.foundations.wbcType.totalVolume.toFixed(2)}
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
+                            </td>
+                            <td className="px-4 py-3 font-bold text-primary">
+                              {result.foundations.bgType.reference}
+                            </td>
+                            <td className="px-4 py-3 text-foreground">
+                              {result.foundations.bgType.dimText}
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {result.foundations.bgType.baseVolume.toFixed(2)}
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {result.foundations.bgType.muffVolume.toFixed(2)}
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {result.foundations.bgType.superBlockVolume > 0 ? (
+                                <span className="font-bold text-signal">
+                                  {result.foundations.bgType.superBlockVolume.toFixed(2)}
+                                </span>
+                              ) : (
+                                '—'
+                              )}
+                            </td>
+                            <td className="px-4 py-3 font-bold text-signal">
+                              {result.foundations.bgType.totalVolume.toFixed(2)}
+                            </td>
+                          </tr>
 
-                  <div className="flex items-center justify-between font-mono text-[10px] text-muted-foreground">
-                    <span>
-                      * Concrete Grade: M-15 / M-20 nominal mix per RDSO specification ETI/OHE/P/3131.
-                    </span>
+                          {/* Row 3: NG-Type */}
+                          <tr className="hover:bg-panel-deep/50 transition-colors">
+                            <td className="px-4 py-3">
+                              <strong className="text-foreground">NG-Type (Pure Gravity)</strong>
+                              <span className="block font-sans text-[9px] text-muted-foreground">
+                                {result.foundations.ngType.soilName} ({result.foundations.ngType.bearingCapacity})
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 font-bold text-primary">
+                              {result.foundations.ngType.reference}
+                            </td>
+                            <td className="px-4 py-3 text-foreground">
+                              {result.foundations.ngType.dimText}
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {result.foundations.ngType.baseVolume.toFixed(2)}
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {result.foundations.ngType.muffVolume.toFixed(2)}
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {result.foundations.ngType.superBlockVolume > 0 ? (
+                                <span className="font-bold text-signal">
+                                  {result.foundations.ngType.superBlockVolume.toFixed(2)}
+                                </span>
+                              ) : (
+                                '—'
+                              )}
+                            </td>
+                            <td className="px-4 py-3 font-bold text-signal">
+                              {result.foundations.ngType.totalVolume.toFixed(2)}
+                            </td>
+                          </tr>
+
+                          {/* Row 4: NBC-Type */}
+                          <tr className="hover:bg-panel-deep/50 transition-colors">
+                            <td className="px-4 py-3">
+                              <strong className="text-foreground">NBC-Type (Dry Black Cotton)</strong>
+                              <span className="block font-sans text-[9px] text-muted-foreground">
+                                {result.foundations.nbcType.soilName} ({result.foundations.nbcType.bearingCapacity})
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 font-bold text-primary">
+                              {result.foundations.nbcType.reference}
+                            </td>
+                            <td className="px-4 py-3 text-foreground">
+                              {result.foundations.nbcType.dimText}
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {result.foundations.nbcType.baseVolume.toFixed(2)}
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {result.foundations.nbcType.muffVolume.toFixed(2)}
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {result.foundations.nbcType.superBlockVolume > 0 ? (
+                                <span className="font-bold text-signal">
+                                  {result.foundations.nbcType.superBlockVolume.toFixed(2)}
+                                </span>
+                              ) : (
+                                '—'
+                              )}
+                            </td>
+                            <td className="px-4 py-3 font-bold text-signal">
+                              {result.foundations.nbcType.totalVolume.toFixed(2)}
+                            </td>
+                          </tr>
+
+                          {/* Row 5: WBC-Type */}
+                          <tr className="hover:bg-panel-deep/50 transition-colors">
+                            <td className="px-4 py-3">
+                              <strong className="text-foreground">WBC-Type (Wet Black Cotton)</strong>
+                              <span className="block font-sans text-[9px] text-muted-foreground">
+                                {result.foundations.wbcType.soilName} ({result.foundations.wbcType.bearingCapacity})
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 font-bold text-primary">
+                              {result.foundations.wbcType.reference}
+                            </td>
+                            <td className="px-4 py-3 text-foreground">
+                              {result.foundations.wbcType.dimText}
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {result.foundations.wbcType.baseVolume.toFixed(2)}
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {result.foundations.wbcType.muffVolume.toFixed(2)}
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {result.foundations.wbcType.superBlockVolume > 0 ? (
+                                <span className="font-bold text-signal">
+                                  {result.foundations.wbcType.superBlockVolume.toFixed(2)}
+                                </span>
+                              ) : (
+                                '—'
+                              )}
+                            </td>
+                            <td className="px-4 py-3 font-bold text-signal">
+                              {result.foundations.wbcType.totalVolume.toFixed(2)}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap items-center justify-between gap-1 font-mono text-[9px] sm:text-[10px] text-muted-foreground">
+                    <span>* Concrete Grade: M-15 / M-20 nominal mix per RDSO ETI/OHE/P/3131.</span>
                     <span>
                       Active FBM Code: <strong className="text-primary">{result.fbmCode}</strong>
                     </span>
@@ -1258,9 +1543,9 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
               {/* Tab 2: Parameter breakdown */}
               {activeTab === 'specifications' && (
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded border border-border bg-panel p-4 space-y-2">
+                  <div className="rounded border border-border bg-panel p-3.5 sm:p-4 space-y-2">
                     <h4 className="text-xs font-bold uppercase text-foreground">Geometry & Clearance Summary</h4>
-                    <div className="space-y-1.5 font-mono text-xs text-muted-foreground">
+                    <div className="space-y-1.5 font-mono text-[11px] sm:text-xs text-muted-foreground">
                       <div className="flex justify-between">
                         <span>Setting Distance (Implantation):</span>
                         <span className="text-foreground">{(implantation ?? 3.0).toFixed(2)} m</span>
@@ -1300,9 +1585,9 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                     </div>
                   </div>
 
-                  <div className="rounded border border-border bg-panel p-4 space-y-2">
+                  <div className="rounded border border-border bg-panel p-3.5 sm:p-4 space-y-2">
                     <h4 className="text-xs font-bold uppercase text-foreground">Structure & Loading Details</h4>
-                    <div className="space-y-1.5 font-mono text-xs text-muted-foreground">
+                    <div className="space-y-1.5 font-mono text-[11px] sm:text-xs text-muted-foreground">
                       <div className="flex justify-between">
                         <span>Wind Pressure:</span>
                         <span className="text-foreground">{wind ?? 'N/A'} kgf/m²</span>
@@ -1342,7 +1627,7 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
 
               {/* Tab 3: Design Notes & Standard Drawing References */}
               {activeTab === 'rdso-notes' && (
-                <div className="rounded border border-border bg-panel p-5 space-y-4 text-xs leading-relaxed text-muted-foreground">
+                <div className="rounded border border-border bg-panel p-4 sm:p-5 space-y-3 sm:space-y-4 text-xs leading-relaxed text-muted-foreground">
                   <div className="border-l-2 border-primary pl-3">
                     <h5 className="font-bold text-foreground">Super Block Rules (ACTM Vol-II & Clause 3.5.14)</h5>
                     <p className="mt-1">
@@ -1366,7 +1651,7 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
 
                   <div className="border-l-2 border-border pl-3">
                     <h5 className="font-bold text-foreground">Standard Drawing References</h5>
-                    <ul className="mt-1 list-disc list-inside space-y-1 font-mono text-[11px]">
+                    <ul className="mt-1 list-disc list-inside space-y-1 font-mono text-[10px] sm:text-[11px]">
                       <li>ACTM Vol-II Part-I — Foundation casting, Super Block standards, and tolerances</li>
                       <li>RDSO Drg ETI/OHE/P/3131 — General arrangement of OHE foundations and adaptation brackets</li>
                       <li>RDSO Drg ETI/C/0058 — Volume charts for B, BG, and NG series foundations</li>
@@ -1377,7 +1662,7 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
               )}
 
               {/* Verification & Legal Disclaimer */}
-              <div className="flex items-start gap-2.5 rounded border border-border/80 bg-panel-deep p-4 text-[11px] leading-relaxed text-muted-foreground">
+              <div className="flex items-start gap-2.5 rounded border border-border/80 bg-panel-deep p-3 sm:p-4 text-[10px] sm:text-[11px] leading-relaxed text-muted-foreground">
                 <ShieldCheck className="mt-0.5 size-4 shrink-0 text-signal" />
                 <p>
                   <strong className="text-foreground">Preliminary Engineering Tool:</strong> Values computed by this configurator are
