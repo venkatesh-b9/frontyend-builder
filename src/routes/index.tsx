@@ -187,21 +187,30 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
 - Reverse Deflection: ${result.deflectionDirection}
 - Foundation Bending Moment (FBM) Code: ${result.fbmCode}
 
-3. MULTI-SOIL FOUNDATION MATRIX (RDSO Volume Chart):
+3. MULTI-SOIL FOUNDATION MATRIX (RDSO Volume Chart & KEC Standards):
 - B-Type (Normal Soil 11,000 kgf/m²):
   Ref: ${result.foundations.bType.reference} | Dim: ${result.foundations.bType.dimText}
+  Function: ${result.foundations.bType.functionCode} | Mast: ${result.foundations.bType.mastTypeLabel}
   Base: ${result.foundations.bType.baseVolume.toFixed(2)} m³ | Muff: ${result.foundations.bType.muffVolume.toFixed(2)} m³ | Super Block: ${result.foundations.bType.superBlockVolume.toFixed(2)} m³ | Total: ${result.foundations.bType.totalVolume.toFixed(2)} m³
+- HB-Type (Hard Soil / Moorum 21,500 kgf/m²):
+  Ref: ${result.foundations.hbType.reference} | Dim: ${result.foundations.hbType.dimText}
+  Function: ${result.foundations.hbType.functionCode} | Mast: ${result.foundations.hbType.mastTypeLabel}
+  Base: ${result.foundations.hbType.baseVolume.toFixed(2)} m³ | Muff: ${result.foundations.hbType.muffVolume.toFixed(2)} m³ | Super Block: ${result.foundations.hbType.superBlockVolume.toFixed(2)} m³ | Total: ${result.foundations.hbType.totalVolume.toFixed(2)} m³
 - BG-Type (Slopes/Cuttings Step C=${result.superBlock.stepC.toFixed(2)}m):
   Ref: ${result.foundations.bgType.reference} | Dim: ${result.foundations.bgType.dimText}
+  Function: ${result.foundations.bgType.functionCode} | Mast: ${result.foundations.bgType.mastTypeLabel}
   Base: ${result.foundations.bgType.baseVolume.toFixed(2)} m³ | Muff: ${result.foundations.bgType.muffVolume.toFixed(2)} m³ | Super Block: ${result.foundations.bgType.superBlockVolume.toFixed(2)} m³ | Total: ${result.foundations.bgType.totalVolume.toFixed(2)} m³
 - NG-Type (Loose Soil 5,500 kgf/m²):
   Ref: ${result.foundations.ngType.reference} | Dim: ${result.foundations.ngType.dimText}
+  Function: ${result.foundations.ngType.functionCode} | Mast: ${result.foundations.ngType.mastTypeLabel}
   Base: ${result.foundations.ngType.baseVolume.toFixed(2)} m³ | Muff: ${result.foundations.ngType.muffVolume.toFixed(2)} m³ | Super Block: ${result.foundations.ngType.superBlockVolume.toFixed(2)} m³ | Total: ${result.foundations.ngType.totalVolume.toFixed(2)} m³
 - NBC-Type (Dry Black Cotton 16,500 kgf/m²):
   Ref: ${result.foundations.nbcType.reference} | Dim: ${result.foundations.nbcType.dimText}
+  Function: ${result.foundations.nbcType.functionCode} | Mast: ${result.foundations.nbcType.mastTypeLabel}
   Base: ${result.foundations.nbcType.baseVolume.toFixed(2)} m³ | Muff: ${result.foundations.nbcType.muffVolume.toFixed(2)} m³ | Super Block: ${result.foundations.nbcType.superBlockVolume.toFixed(2)} m³ | Total: ${result.foundations.nbcType.totalVolume.toFixed(2)} m³
 - WBC-Type (Wet Black Cotton 8,000 kgf/m²):
   Ref: ${result.foundations.wbcType.reference} | Dim: ${result.foundations.wbcType.dimText}
+  Function: ${result.foundations.wbcType.functionCode} | Mast: ${result.foundations.wbcType.mastTypeLabel}
   Base: ${result.foundations.wbcType.baseVolume.toFixed(2)} m³ | Muff: ${result.foundations.wbcType.muffVolume.toFixed(2)} m³ | Super Block: ${result.foundations.wbcType.superBlockVolume.toFixed(2)} m³ | Total: ${result.foundations.wbcType.totalVolume.toFixed(2)} m³
 
 * Reference: Indian Railways RDSO Employment Schedules, ACTM Vol-II, and Volume Charts.`;
@@ -1284,6 +1293,7 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                       {[
                         result.foundations.bType,
+                        result.foundations.hbType,
                         result.foundations.bgType,
                         result.foundations.ngType,
                         result.foundations.nbcType,
@@ -1300,9 +1310,33 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                               </div>
                               <div className="text-[10px] text-muted-foreground">{item.soilName}</div>
                             </div>
-                            <Badge variant="outline" className="border-primary/40 bg-primary/10 font-mono text-[10px] text-primary">
-                              {item.reference}
-                            </Badge>
+                            <div className="flex flex-col items-end gap-1">
+                              <Badge variant="outline" className="border-primary/40 bg-primary/10 font-mono text-[10px] font-bold text-primary">
+                                {item.reference}
+                              </Badge>
+                              <span className="font-mono text-[9px] text-signal font-semibold">
+                                FBM {item.fbmCode}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Function Code & Mast Section Badge Block */}
+                          <div className="rounded border border-primary/20 bg-primary/5 p-2 space-y-1 font-mono text-[10px]">
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground text-[9px] uppercase font-semibold">Function Code:</span>
+                              <Badge variant="secondary" className="font-mono text-[9px] px-1.5 py-0">
+                                {item.functionCode}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground text-[9px] uppercase font-semibold">Mast Section:</span>
+                              <span className="font-bold text-foreground text-[10px] truncate max-w-[190px]" title={item.mastTypeLabel}>
+                                {item.mastTypeLabel}
+                              </span>
+                            </div>
+                            <div className="pt-0.5 text-[8.5px] text-muted-foreground line-clamp-1 border-t border-primary/10 mt-1">
+                              {item.fbmBreakdown}
+                            </div>
                           </div>
 
                           <div className="rounded bg-panel-deep p-2 border border-border/80 space-y-1 font-mono text-[10px]">
@@ -1342,190 +1376,80 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                       ))}
                     </div>
                   ) : (
-                    /* Mode B: Full 7-Column Tabular View (with touch-friendly scroll) */
+                    /* Mode B: Full 9-Column Tabular View (with touch-friendly scroll) */
                     <div className="overflow-x-auto rounded border border-border bg-panel">
-                      <table className="w-full min-w-[760px] text-left text-xs">
+                      <table className="w-full min-w-[860px] text-left text-xs">
                         <thead className="border-b border-border bg-panel-deep font-mono text-[10px] uppercase text-muted-foreground">
                           <tr>
-                            <th className="px-4 py-3">RDSO Reference / Soil Type</th>
-                            <th className="px-4 py-3">Foundation Code</th>
-                            <th className="px-4 py-3">Dimensions (A × B × H in meters)</th>
-                            <th className="px-4 py-3">Base Vol (m³)</th>
-                            <th className="px-4 py-3">Muff Vol (m³)</th>
-                            <th className="px-4 py-3">Super Block (m³)</th>
-                            <th className="px-4 py-3 font-bold text-signal">Total Vol (m³)</th>
+                            <th className="px-3.5 py-3">Soil & Foundation Type</th>
+                            <th className="px-3 py-3">Function Code</th>
+                            <th className="px-3 py-3">Mast Section</th>
+                            <th className="px-3 py-3">Fdn Code</th>
+                            <th className="px-3 py-3">Dimensions (A × B × H)</th>
+                            <th className="px-2.5 py-3">Base (m³)</th>
+                            <th className="px-2.5 py-3">Muff (m³)</th>
+                            <th className="px-2.5 py-3">Super Block (m³)</th>
+                            <th className="px-3.5 py-3 font-bold text-signal">Total (m³)</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border font-mono text-[11px]">
-                          {/* Row 1: B-Type */}
-                          <tr className="hover:bg-panel-deep/50 transition-colors">
-                            <td className="px-4 py-3">
-                              <strong className="text-foreground">B-Type (Side Bearing)</strong>
-                              <span className="block font-sans text-[9px] text-muted-foreground">
-                                {result.foundations.bType.soilName} ({result.foundations.bType.bearingCapacity})
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 font-bold text-primary">
-                              {result.foundations.bType.reference}
-                            </td>
-                            <td className="px-4 py-3 text-foreground">
-                              {result.foundations.bType.dimText}
-                            </td>
-                            <td className="px-4 py-3 text-muted-foreground">
-                              {result.foundations.bType.baseVolume.toFixed(2)}
-                            </td>
-                            <td className="px-4 py-3 text-muted-foreground">
-                              {result.foundations.bType.muffVolume.toFixed(2)}
-                            </td>
-                            <td className="px-4 py-3 text-muted-foreground">
-                              {result.foundations.bType.superBlockVolume > 0 ? (
-                                <span className="font-bold text-signal">
-                                  {result.foundations.bType.superBlockVolume.toFixed(2)}
+                          {[
+                            result.foundations.bType,
+                            result.foundations.hbType,
+                            result.foundations.bgType,
+                            result.foundations.ngType,
+                            result.foundations.nbcType,
+                            result.foundations.wbcType,
+                          ].map((item, idx) => (
+                            <tr
+                              key={item.type}
+                              className={`hover:bg-panel-deep/50 transition-colors ${
+                                idx % 2 === 1 ? 'bg-panel-deep/20' : ''
+                              }`}
+                            >
+                              <td className="px-3.5 py-3">
+                                <strong className="text-foreground">{item.type} ({item.name.replace(' Foundation', '')})</strong>
+                                <span className="block font-sans text-[9px] text-muted-foreground">
+                                  {item.soilName} ({item.bearingCapacity})
                                 </span>
-                              ) : (
-                                '—'
-                              )}
-                            </td>
-                            <td className="px-4 py-3 font-bold text-signal">
-                              {result.foundations.bType.totalVolume.toFixed(2)}
-                            </td>
-                          </tr>
-
-                          {/* Row 2: BG-Type */}
-                          <tr className="hover:bg-panel-deep/50 transition-colors bg-panel-deep/20">
-                            <td className="px-4 py-3">
-                              <strong className="text-foreground">BG-Type (Side Gravity)</strong>
-                              <span className="block font-sans text-[9px] text-muted-foreground">
-                                {result.foundations.bgType.soilName} (Slope step C = {result.superBlock.stepC.toFixed(2)}m)
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 font-bold text-primary">
-                              {result.foundations.bgType.reference}
-                            </td>
-                            <td className="px-4 py-3 text-foreground">
-                              {result.foundations.bgType.dimText}
-                            </td>
-                            <td className="px-4 py-3 text-muted-foreground">
-                              {result.foundations.bgType.baseVolume.toFixed(2)}
-                            </td>
-                            <td className="px-4 py-3 text-muted-foreground">
-                              {result.foundations.bgType.muffVolume.toFixed(2)}
-                            </td>
-                            <td className="px-4 py-3 text-muted-foreground">
-                              {result.foundations.bgType.superBlockVolume > 0 ? (
-                                <span className="font-bold text-signal">
-                                  {result.foundations.bgType.superBlockVolume.toFixed(2)}
+                              </td>
+                              <td className="px-3 py-3 font-sans">
+                                <Badge variant="secondary" className="font-mono text-[9px] px-1.5 py-0 whitespace-nowrap">
+                                  {item.functionCode}
+                                </Badge>
+                              </td>
+                              <td className="px-3 py-3">
+                                <span className="font-bold text-foreground text-[10px] whitespace-nowrap" title={item.mastTypeLabel}>
+                                  {item.mastTypeLabel}
                                 </span>
-                              ) : (
-                                '—'
-                              )}
-                            </td>
-                            <td className="px-4 py-3 font-bold text-signal">
-                              {result.foundations.bgType.totalVolume.toFixed(2)}
-                            </td>
-                          </tr>
-
-                          {/* Row 3: NG-Type */}
-                          <tr className="hover:bg-panel-deep/50 transition-colors">
-                            <td className="px-4 py-3">
-                              <strong className="text-foreground">NG-Type (Pure Gravity)</strong>
-                              <span className="block font-sans text-[9px] text-muted-foreground">
-                                {result.foundations.ngType.soilName} ({result.foundations.ngType.bearingCapacity})
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 font-bold text-primary">
-                              {result.foundations.ngType.reference}
-                            </td>
-                            <td className="px-4 py-3 text-foreground">
-                              {result.foundations.ngType.dimText}
-                            </td>
-                            <td className="px-4 py-3 text-muted-foreground">
-                              {result.foundations.ngType.baseVolume.toFixed(2)}
-                            </td>
-                            <td className="px-4 py-3 text-muted-foreground">
-                              {result.foundations.ngType.muffVolume.toFixed(2)}
-                            </td>
-                            <td className="px-4 py-3 text-muted-foreground">
-                              {result.foundations.ngType.superBlockVolume > 0 ? (
-                                <span className="font-bold text-signal">
-                                  {result.foundations.ngType.superBlockVolume.toFixed(2)}
-                                </span>
-                              ) : (
-                                '—'
-                              )}
-                            </td>
-                            <td className="px-4 py-3 font-bold text-signal">
-                              {result.foundations.ngType.totalVolume.toFixed(2)}
-                            </td>
-                          </tr>
-
-                          {/* Row 4: NBC-Type */}
-                          <tr className="hover:bg-panel-deep/50 transition-colors">
-                            <td className="px-4 py-3">
-                              <strong className="text-foreground">NBC-Type (Dry Black Cotton)</strong>
-                              <span className="block font-sans text-[9px] text-muted-foreground">
-                                {result.foundations.nbcType.soilName} ({result.foundations.nbcType.bearingCapacity})
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 font-bold text-primary">
-                              {result.foundations.nbcType.reference}
-                            </td>
-                            <td className="px-4 py-3 text-foreground">
-                              {result.foundations.nbcType.dimText}
-                            </td>
-                            <td className="px-4 py-3 text-muted-foreground">
-                              {result.foundations.nbcType.baseVolume.toFixed(2)}
-                            </td>
-                            <td className="px-4 py-3 text-muted-foreground">
-                              {result.foundations.nbcType.muffVolume.toFixed(2)}
-                            </td>
-                            <td className="px-4 py-3 text-muted-foreground">
-                              {result.foundations.nbcType.superBlockVolume > 0 ? (
-                                <span className="font-bold text-signal">
-                                  {result.foundations.nbcType.superBlockVolume.toFixed(2)}
-                                </span>
-                              ) : (
-                                '—'
-                              )}
-                            </td>
-                            <td className="px-4 py-3 font-bold text-signal">
-                              {result.foundations.nbcType.totalVolume.toFixed(2)}
-                            </td>
-                          </tr>
-
-                          {/* Row 5: WBC-Type */}
-                          <tr className="hover:bg-panel-deep/50 transition-colors">
-                            <td className="px-4 py-3">
-                              <strong className="text-foreground">WBC-Type (Wet Black Cotton)</strong>
-                              <span className="block font-sans text-[9px] text-muted-foreground">
-                                {result.foundations.wbcType.soilName} ({result.foundations.wbcType.bearingCapacity})
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 font-bold text-primary">
-                              {result.foundations.wbcType.reference}
-                            </td>
-                            <td className="px-4 py-3 text-foreground">
-                              {result.foundations.wbcType.dimText}
-                            </td>
-                            <td className="px-4 py-3 text-muted-foreground">
-                              {result.foundations.wbcType.baseVolume.toFixed(2)}
-                            </td>
-                            <td className="px-4 py-3 text-muted-foreground">
-                              {result.foundations.wbcType.muffVolume.toFixed(2)}
-                            </td>
-                            <td className="px-4 py-3 text-muted-foreground">
-                              {result.foundations.wbcType.superBlockVolume > 0 ? (
-                                <span className="font-bold text-signal">
-                                  {result.foundations.wbcType.superBlockVolume.toFixed(2)}
-                                </span>
-                              ) : (
-                                '—'
-                              )}
-                            </td>
-                            <td className="px-4 py-3 font-bold text-signal">
-                              {result.foundations.wbcType.totalVolume.toFixed(2)}
-                            </td>
-                          </tr>
+                              </td>
+                              <td className="px-3 py-3">
+                                <span className="font-bold text-primary">{item.reference}</span>
+                                <span className="block text-[9px] text-signal font-semibold">FBM {item.fbmCode}</span>
+                              </td>
+                              <td className="px-3 py-3 text-foreground whitespace-nowrap">
+                                {item.dimText}
+                              </td>
+                              <td className="px-2.5 py-3 text-muted-foreground">
+                                {item.baseVolume.toFixed(2)}
+                              </td>
+                              <td className="px-2.5 py-3 text-muted-foreground">
+                                {item.muffVolume.toFixed(2)}
+                              </td>
+                              <td className="px-2.5 py-3 text-muted-foreground">
+                                {item.superBlockVolume > 0 ? (
+                                  <span className="font-bold text-signal">
+                                    {item.superBlockVolume.toFixed(2)}
+                                  </span>
+                                ) : (
+                                  '—'
+                                )}
+                              </td>
+                              <td className="px-3.5 py-3 font-bold text-signal">
+                                {item.totalVolume.toFixed(2)}
+                              </td>
+                            </tr>
+                          ))}
                         </tbody>
                       </table>
                     </div>
@@ -1687,12 +1611,16 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
               <p><strong>Super Block Height:</strong> {result.superBlock.height.toFixed(2)} m</p>
             )}
             <p><strong>Alignment:</strong> {alignment} (Radius: {radius} m, Span: {span} m, Versine: {result.versine} mm)</p>
-            <p><strong>Mast Function:</strong> {role}</p>
-            <p><strong>Resolved Mast:</strong> {result.mastSection}</p>
+            <p><strong>Mast Function Code:</strong> {result.foundations.bType.functionCode}</p>
+            <p><strong>Resolved Mast Section:</strong> {result.mastSection}</p>
             <p><strong>Reverse Deflection:</strong> {result.deflectionDirection}</p>
-            <p><strong>FBM Code:</strong> {result.fbmCode}</p>
-            <p><strong>B-Type Foundation:</strong> {result.foundations.bType.reference} ({result.foundations.bType.dimText}) — {result.foundations.bType.totalVolume} m³</p>
-            <p><strong>BG-Type Foundation:</strong> {result.foundations.bgType.reference} ({result.foundations.bgType.dimText}) — {result.foundations.bgType.totalVolume} m³</p>
+            <p><strong>FBM Code:</strong> {result.fbmCode} ({result.foundations.bType.fbmBreakdown})</p>
+            <p><strong>B-Type Foundation (Normal Soil):</strong> {result.foundations.bType.reference} ({result.foundations.bType.dimText}) — Total Vol: {result.foundations.bType.totalVolume} m³</p>
+            <p><strong>HB-Type Foundation (Hard Soil):</strong> {result.foundations.hbType.reference} ({result.foundations.hbType.dimText}) — Total Vol: {result.foundations.hbType.totalVolume} m³</p>
+            <p><strong>BG-Type Foundation (Cuttings/Slopes):</strong> {result.foundations.bgType.reference} ({result.foundations.bgType.dimText}) — Total Vol: {result.foundations.bgType.totalVolume} m³</p>
+            <p><strong>NG-Type Foundation (Loose Soil):</strong> {result.foundations.ngType.reference} ({result.foundations.ngType.dimText}) — Total Vol: {result.foundations.ngType.totalVolume} m³</p>
+            <p><strong>NBC-Type Foundation (Dry Black Cotton):</strong> {result.foundations.nbcType.reference} ({result.foundations.nbcType.dimText}) — Total Vol: {result.foundations.nbcType.totalVolume} m³</p>
+            <p><strong>WBC-Type Foundation (Wet Black Cotton):</strong> {result.foundations.wbcType.reference} ({result.foundations.wbcType.dimText}) — Total Vol: {result.foundations.wbcType.totalVolume} m³</p>
           </div>
         </div>
       </div>
