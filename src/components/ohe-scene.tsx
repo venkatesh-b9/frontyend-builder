@@ -359,19 +359,77 @@ function buildOheAssembly(
       addBox(group, mastX, fTopY + sbH / 2, 0, ngDims.b4 * 0.96, sbH, ngDims.a2 * 0.96, mat.superBlockConcrete);
     }
 
+  } else if (foundationTypeKey === 'nbcType') {
+    // ------------------------------------------------------------------------
+    // PDF 2 PAGE 06: NBC-Type Dry Black Cotton Soil Deep Stepped Foundation
+    // ------------------------------------------------------------------------
+    const nbcEntry = result.foundations.nbcType;
+    const nbcDims = nbcEntry.nbcDims ?? {
+      a1: 1.20,
+      a2: 0.80,
+      b1: 1.90,
+      b2: 1.00,
+      b3: 0.80,
+      h2: 0.45,
+      h3: 2.25,
+    };
+    muffTopWidth = nbcDims.a2;
+
+    const totalDepth = 0.15 + nbcDims.h2 + nbcDims.h3;
+    // Stage 1: Bottom base pad (150 mm = 0.15 m)
+    const h1 = 0.15;
+    const y1 = fTopY - totalDepth + h1 / 2;
+    addBox(group, mastX, y1, 0, nbcDims.a1, h1, nbcDims.b1, mat.concrete);
+
+    // Stage 2: Pyramidal frustum of height H2 tapering to A2 × B2
+    const yBot2 = fTopY - totalDepth + h1;
+    const yTop2 = yBot2 + nbcDims.h2;
+    addFrustum(group, mastX, yBot2, yTop2, nbcDims.a1, nbcDims.b1, nbcDims.a2, nbcDims.b2, mat.concrete);
+
+    // Stage 3: Top pedestal column of height H3 (A2 × B2)
+    const y3 = fTopY - nbcDims.h3 / 2;
+    addBox(group, mastX, y3, 0, nbcDims.a2, nbcDims.h3, nbcDims.b2, mat.concrete);
+
+    // Super Block if C > 0.50 m (rests on top of A2 × B2 neck)
+    if (sbH > 0) {
+      addBox(group, mastX, fTopY + sbH / 2, 0, nbcDims.a2 * 0.96, sbH, nbcDims.b2 * 0.96, mat.superBlockConcrete);
+    }
+
+  } else if (foundationTypeKey === 'wbcType') {
+    // ------------------------------------------------------------------------
+    // PDF 2 PAGE 04: WBC-Type Wet Black Cotton Soil Stepped Raft Foundation
+    // ------------------------------------------------------------------------
+    const wbcEntry = result.foundations.wbcType;
+    const wbcDims = wbcEntry.wbcDims ?? {
+      a1: 1.10,
+      a2: 1.80,
+      a3: 0.80,
+      b1: 1.50,
+      b2: 2.20,
+      h1: 1.20,
+      h2: 0.50,
+    };
+    muffTopWidth = wbcDims.a1;
+
+    const totalDepth = wbcDims.h1 + wbcDims.h2;
+    // Stage 1: Bottom base raft pad (H2 = 0.50 m, A2 × B2)
+    const yBotRaft = fTopY - totalDepth + wbcDims.h2 / 2;
+    addBox(group, mastX, yBotRaft, 0, wbcDims.a2, wbcDims.h2, wbcDims.b2, mat.concrete);
+
+    // Stage 2: Upper rectangular pedestal (H1 = 1.20 m, A1 × B1)
+    const yTopPedestal = fTopY - wbcDims.h1 / 2;
+    addBox(group, mastX, yTopPedestal, 0, wbcDims.a1, wbcDims.h1, wbcDims.b1, mat.concrete);
+
+    // Super Block if C > 0.50 m (rests on top of A1 × B1)
+    if (sbH > 0) {
+      addBox(group, mastX, fTopY + sbH / 2, 0, wbcDims.a1 * 0.96, sbH, wbcDims.b1 * 0.96, mat.superBlockConcrete);
+    }
+
   } else {
     // ------------------------------------------------------------------------
-    // IMAGE 3: B-Type (or HB-Type / NBC / WBC) Rectangular Foundation
+    // IMAGE 3: B-Type (Normal Soil) or HB-Type (Hard Soil) Rectangular Foundation
     // ------------------------------------------------------------------------
-    const entry =
-      foundationTypeKey === 'hbType'
-        ? result.foundations.hbType
-        : foundationTypeKey === 'nbcType'
-        ? result.foundations.nbcType
-        : foundationTypeKey === 'wbcType'
-        ? result.foundations.wbcType
-        : result.foundations.bType;
-
+    const entry = foundationTypeKey === 'hbType' ? result.foundations.hbType : result.foundations.bType;
     const fA = entry.a;
     const fB = entry.b;
     const fH = entry.h;

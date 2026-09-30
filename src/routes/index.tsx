@@ -14,6 +14,7 @@ import {
   Crosshair,
   Eye,
   FileSpreadsheet,
+  FileText,
   Gauge,
   HelpCircle,
   Layers,
@@ -42,6 +43,10 @@ import {
   roles,
   spans,
   windZones,
+  RDSO_CURVE_RADII,
+  getCurveScheduleForWind,
+  getMaxTangentSpanForWind,
+  getStandardImplantation,
   type Alignment,
   type Role,
 } from '@/lib/ohe-rules';
@@ -518,20 +523,20 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                       <div
                         onClick={() => setImplantationMode('standard')}
                         className={`cursor-pointer rounded border p-3 transition-all active:scale-[0.98] ${
-                          implantationMode === 'standard' && (implantation ?? 3.0) === 3.0
+                          implantationMode === 'standard'
                             ? 'border-primary bg-primary/10 ring-1 ring-primary'
                             : 'border-border bg-panel hover:bg-panel-deep'
                         }`}
                       >
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold uppercase text-foreground">Card A: Standard</span>
+                          <span className="text-xs font-bold uppercase text-foreground">Card A: Standard Setting</span>
                           {implantationMode === 'standard' && <Check className="size-3.5 text-primary" />}
                         </div>
                         <div className="mt-2 font-mono text-xl font-bold text-signal">
-                          3.00 <span className="text-xs font-normal text-muted-foreground">m</span>
+                          {result.minSetting.toFixed(2)} <span className="text-xs font-normal text-muted-foreground">m</span>
                         </div>
                         <p className="mt-1 text-[10px] text-muted-foreground">
-                          Fixed standard setting distance (baseline 2.80–3.00 m).
+                          Auto-enforced per PDF 2 Page 37 ({alignment === 'tangent' ? 'Tangent: 2.80m' : alignment === 'outside' ? `Outside Curve: ${result.minSetting.toFixed(2)}m` : `Inside Curve: ${result.minSetting.toFixed(2)}m`}).
                         </p>
                       </div>
 
@@ -545,15 +550,15 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                         }`}
                       >
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold uppercase text-foreground">Card B: Dynamic</span>
+                          <span className="text-xs font-bold uppercase text-foreground">Card B: Dynamic Custom</span>
                           {implantationMode === 'custom' && <Check className="size-3.5 text-primary" />}
                         </div>
                         <div className="mt-2 font-mono text-xl font-bold text-signal">
-                          {(implantation ?? 3.5).toFixed(2)}{' '}
+                          {(implantation ?? result.minSetting).toFixed(2)}{' '}
                           <span className="text-xs font-normal text-muted-foreground">m</span>
                         </div>
                         <p className="mt-1 text-[10px] text-muted-foreground">
-                          Dynamic setting bounded between 3.00 m and 5.00 m.
+                          Custom setting (2.50m – 5.00m) resolving exact PDF 1 Implantation Tier.
                         </p>
                       </div>
                     </div>
@@ -563,15 +568,15 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                   <div className="rounded border border-border/80 bg-panel p-3.5 space-y-3">
                     <div className="flex items-center justify-between">
                       <label className="text-[11px] font-semibold uppercase text-muted-foreground">
-                        Implantation Distance (m)
+                        Implantation Setting Distance (m)
                       </label>
                       <div className="flex items-center gap-2">
                         <Input
                           type="number"
-                          min={3.0}
+                          min={2.5}
                           max={5.0}
                           step={0.05}
-                          value={implantation ?? 3.0}
+                          value={implantation ?? result.minSetting}
                           onChange={(e) => {
                             const val = parseFloat(e.target.value);
                             if (!isNaN(val)) {
@@ -586,20 +591,20 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                     </div>
 
                     <Slider
-                      min={3.0}
+                      min={2.5}
                       max={5.0}
                       step={0.05}
-                      value={[implantation ?? 3.0]}
+                      value={[implantation ?? result.minSetting]}
                       onValueChange={(vals) => {
                         setImplantationMode('custom');
-                        setImplantation(vals[0] ?? 3.0);
+                        setImplantation(vals[0] ?? 2.8);
                       }}
                       className="py-1"
                     />
 
                     {/* Quick Touch Preset Buttons on Mobile */}
                     <div className="flex flex-wrap gap-1.5 pt-1">
-                      {[3.0, 3.3, 3.5, 3.8, 4.2, 4.75].map((presetVal) => (
+                      {[2.8, 2.95, 3.2, 3.35, 3.55, 3.8, 4.2, 4.85].map((presetVal) => (
                         <button
                           key={presetVal}
                           type="button"
@@ -608,7 +613,7 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                             setImplantation(presetVal);
                           }}
                           className={`rounded border px-2 py-0.5 font-mono text-[9px] transition-colors ${
-                            (implantation ?? 3.0) === presetVal
+                            (implantation ?? result.minSetting) === presetVal
                               ? 'border-signal bg-signal/20 font-bold text-signal'
                               : 'border-border bg-panel-deep text-muted-foreground hover:text-foreground'
                           }`}
@@ -618,7 +623,7 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                       ))}
                     </div>
 
-                    {/* Tier Flag Banner */}
+                    {/* Tier Flag Banner (PDF 1 Employment Schedule Sheet Mapping) */}
                     <div
                       className={`rounded border px-3 py-2 text-[11px] ${
                         result.requiresChair
@@ -626,11 +631,15 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                           : 'border-border bg-panel-deep text-muted-foreground'
                       }`}
                     >
-                      <div className="flex items-center gap-1.5 font-bold">
-                        <span className="font-mono">{result.implantationTier}:</span> {result.tierDescription}
+                      <div className="flex flex-wrap items-center justify-between gap-1 font-bold">
+                        <span className="font-mono">{result.sheetInfo.implantationTier}:</span>
+                        <span className="text-[10px] text-foreground font-normal">{result.sheetInfo.implantationDesc}</span>
+                        <Badge variant="outline" className="border-border text-[9px]">
+                          PDF 1 Sheet-{result.sheetInfo.sheetNumber}
+                        </Badge>
                       </div>
                       {result.requiresChair && (
-                        <p className="mt-1 text-[10px] leading-tight">
+                        <p className="mt-1 text-[10px] leading-tight text-signal">
                           ⚠️ Warning: Requires Cantilever Adaptor Chair per RDSO Drawing <strong>ETI/OHE/P/3131</strong>.
                         </p>
                       )}
@@ -820,13 +829,45 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                   {/* Curve Parameters */}
                   {alignment && alignment !== 'tangent' && (
                     <div className="rounded border border-border/80 bg-panel p-3.5 space-y-3.5">
-                      {/* Radius Selector */}
+                      {/* Standard RDSO Curve Radii Quick Selector (PDF 1 Discrete Rows) */}
                       <div>
                         <div className="flex items-center justify-between">
-                          <label className="text-[11px] font-semibold uppercase text-muted-foreground">
-                            Curve Radius (R)
+                          <label className="text-[11px] font-bold uppercase text-foreground">
+                            1. Select Curve Radius (R)
                           </label>
                           <span className="font-mono text-xs font-bold text-signal">{radius} m</span>
+                        </div>
+                        <div className="mt-2 grid grid-cols-3 gap-1.5 sm:grid-cols-4 lg:grid-cols-6">
+                          {RDSO_CURVE_RADII.map((rVal) => {
+                            const curveSpecs = getCurveScheduleForWind(wind ?? 105);
+                            const matched = curveSpecs.find((c) => c.radius <= rVal) ?? curveSpecs[curveSpecs.length - 1]!;
+                            const isSelected = radius === rVal;
+                            return (
+                              <button
+                                key={rVal}
+                                type="button"
+                                onClick={() => setRadius(rVal)}
+                                className={`flex flex-col items-center justify-center rounded border p-1.5 transition-all text-center ${
+                                  isSelected
+                                    ? 'border-signal bg-signal/15 ring-1 ring-signal text-foreground font-bold'
+                                    : 'border-border bg-panel-deep/60 hover:bg-panel-deep text-muted-foreground hover:text-foreground'
+                                }`}
+                              >
+                                <span className="font-mono text-xs font-bold">{rVal}m</span>
+                                <span className="font-mono text-[9px] text-signal font-semibold">
+                                  {matched.maxSpan}m span
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Slider and Input for Custom Radius */}
+                      <div className="pt-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] uppercase font-semibold text-muted-foreground">Fine Radius Adjustment</span>
+                          <span className="font-mono text-[10px] text-muted-foreground">200 m – 2500 m</span>
                         </div>
                         <Slider
                           min={200}
@@ -834,31 +875,65 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                           step={50}
                           value={[radius]}
                           onValueChange={(vals) => setRadius(vals[0] ?? 1000)}
-                          className="mt-2.5 py-1"
+                          className="mt-1.5 py-1"
                         />
-                        <div className="mt-1 flex justify-between font-mono text-[9px] text-muted-foreground">
-                          <span>200 m (Sharp)</span>
-                          <span>2500 m (Mild)</span>
+                      </div>
+
+                      {/* Schedule Coupling Banner (PDF 1 Automatic Rule) */}
+                      <div className="rounded border border-primary/40 bg-primary/10 p-2.5 text-[11px] space-y-1">
+                        <div className="flex flex-wrap items-center justify-between gap-1 font-bold text-primary">
+                          <span className="flex items-center gap-1.5">
+                            <Sparkles className="size-3.5" /> PDF 1 Schedule Auto-Coupled
+                          </span>
+                          <span className="font-mono text-[10px] text-primary">
+                            {result.sheetInfo.sheetDrawing}
+                          </span>
                         </div>
+                        <p className="text-[10px] leading-relaxed text-muted-foreground">
+                          Radius <strong>{radius} m</strong> on {alignment === 'inside' ? 'Inside Curve' : 'Outside Curve'} auto-selects OHE Span to{' '}
+                          <strong className="text-signal">{result.maxPermissibleSpan} m</strong> with Max Versine{' '}
+                          <strong className="text-signal">{result.maxScheduleVersine} mm</strong> per RDSO Employment Schedule.
+                        </p>
                       </div>
 
                       {/* Span Selector */}
                       <div>
-                        <label className="text-[11px] font-semibold uppercase text-muted-foreground">
-                          OHE Span Length (m)
-                        </label>
+                        <div className="flex items-center justify-between">
+                          <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                            2. OHE Span Length (m)
+                          </label>
+                          {span > result.maxPermissibleSpan && (
+                            <button
+                              type="button"
+                              onClick={() => setSpan(result.maxPermissibleSpan)}
+                              className="font-mono text-[10px] text-destructive underline hover:text-destructive/80 font-bold"
+                            >
+                              Reset to Schedule Max ({result.maxPermissibleSpan}m)
+                            </button>
+                          )}
+                        </div>
                         <Select value={String(span)} onValueChange={(val) => setSpan(parseFloat(val))}>
                           <SelectTrigger className="mt-1.5 h-8 border-border bg-panel-deep font-mono text-xs">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
                             {spans.map((s) => (
-                              <SelectItem key={s} value={String(s)} className="font-mono text-xs">
-                                {s.toFixed(1)} m standard span
+                              <SelectItem
+                                key={s}
+                                value={String(s)}
+                                className={`font-mono text-xs ${s > result.maxPermissibleSpan ? 'text-destructive' : ''}`}
+                              >
+                                {s.toFixed(1)} m span {s === result.maxPermissibleSpan ? '★ (Schedule Max)' : s > result.maxPermissibleSpan ? '⚠️ (Exceeds Max!)' : ''}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
+                        {span > result.maxPermissibleSpan && (
+                          <div className="mt-1.5 flex items-start gap-1 rounded bg-destructive/10 border border-destructive/30 p-1.5 text-[10px] text-destructive">
+                            <AlertTriangle className="size-3.5 shrink-0 mt-0.5" />
+                            <span>Warning: Selected span ({span}m) exceeds RDSO maximum permissible span of {result.maxPermissibleSpan}m for R={radius}m.</span>
+                          </div>
+                        )}
                       </div>
 
                       {/* Dynamic Versine Readout */}
@@ -876,8 +951,8 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                         <div className="flex items-start gap-2 rounded border border-destructive/40 bg-destructive/10 p-2.5 text-[11px] text-destructive">
                           <AlertTriangle className="mt-0.5 size-4 shrink-0" />
                           <span>
-                            Setting distance ({implantation?.toFixed(2)} m) is below the RDSO minimum (
-                            {result.minSetting.toFixed(2)} m) required for an inside curve of radius {radius} m.
+                            Setting distance ({(implantation ?? result.minSetting).toFixed(2)} m) is below the RDSO minimum (
+                            {result.minSetting.toFixed(2)} m) required for an inside curve of radius {radius} m per PDF 2 Page 37.
                           </span>
                         </div>
                       )}
@@ -885,9 +960,23 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                   )}
 
                   {alignment === 'tangent' && (
-                    <div className="flex items-center justify-between rounded border border-border bg-panel px-3 py-2 font-mono text-[10px] text-muted-foreground">
-                      <span>Catenary Stagger: 0 mm</span>
-                      <span className="text-foreground">Versine: 0.0 mm</span>
+                    <div className="rounded border border-border bg-panel p-3 text-[11px] space-y-2">
+                      <div className="flex items-center justify-between font-mono text-[10px]">
+                        <span className="text-muted-foreground">Track Alignment:</span>
+                        <span className="text-foreground font-bold">Straight Tangent (Radius: ∞)</span>
+                      </div>
+                      <div className="flex items-center justify-between font-mono text-[10px]">
+                        <span className="text-muted-foreground">Permissible OHE Span:</span>
+                        <span className="text-signal font-bold">{result.maxPermissibleSpan} m</span>
+                      </div>
+                      <div className="flex items-center justify-between font-mono text-[10px]">
+                        <span className="text-muted-foreground">Versine / Stagger:</span>
+                        <span className="text-foreground font-semibold">0.0 mm</span>
+                      </div>
+                      <div className="flex items-center justify-between font-mono text-[10px]">
+                        <span className="text-muted-foreground">Schedule Drawing:</span>
+                        <span className="text-primary font-bold">{result.sheetInfo.sheetDrawing} (Row 1)</span>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -995,13 +1084,16 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
 
                 {allStepsComplete && (
                   <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
-                    {/* 3D Foundation Model Selector (Image 3, Image 4, Image 5) */}
-                    <div className="flex items-center rounded border border-border bg-panel p-0.5" title="Switch 3D Foundation Type (Images 3, 4, 5)">
+                    {/* 3D Foundation Model Selector (PDF 2 Volume Chart Drawings) */}
+                    <div className="flex items-center rounded border border-border bg-panel p-0.5" title="Switch 3D Foundation Type (PDF 2 Volume Chart)">
                       {(
                         [
-                          ['bType', 'B-Type (Img 3)'],
-                          ['bgType', 'BG-Type (Img 4)'],
-                          ['ngType', 'NG-Type (Img 5)'],
+                          ['bType', 'B (Img 3)'],
+                          ['hbType', 'HB (P.02)'],
+                          ['bgType', 'BG (Img 4)'],
+                          ['ngType', 'NG (Img 5)'],
+                          ['nbcType', 'NBC (P.06)'],
+                          ['wbcType', 'WBC (P.04)'],
                         ] as const
                       ).map(([k, label]) => (
                         <button
@@ -1097,15 +1189,19 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                             : selectedFoundationType === 'ngType'
                             ? `NG-Type (Img 5: ${result.foundations.ngType.reference})`
                             : selectedFoundationType === 'hbType'
-                            ? `HB-Type (${result.foundations.hbType.reference})`
+                            ? `HB-Type (P.02: ${result.foundations.hbType.reference})`
                             : selectedFoundationType === 'nbcType'
-                            ? `NBC-Type (${result.foundations.nbcType.reference})`
-                            : `WBC-Type (${result.foundations.wbcType.reference})`}
+                            ? `NBC-Type (P.06: ${result.foundations.nbcType.reference})`
+                            : `WBC-Type (P.04: ${result.foundations.wbcType.reference})`}
                         </span>
+                      </div>
+                      <div className="hidden items-center gap-1.5 rounded border border-border bg-panel-deep/90 px-2 py-1 font-mono text-[9px] text-foreground backdrop-blur-sm md:flex">
+                        <FileText className="size-3 text-primary" />
+                        <span className="text-primary font-bold">{result.sheetInfo.sheetDrawing}</span>
                       </div>
                       <div className="flex items-center gap-1.5 rounded border border-border bg-panel-deep/90 px-2 py-1 font-mono text-[9px] text-foreground backdrop-blur-sm sm:px-3 sm:py-1.5 sm:text-[10px]">
                         <Crosshair className="size-3 text-signal" />
-                        IMP: <span className="font-bold text-signal">{(implantation ?? 3.0).toFixed(2)}m</span>
+                        IMP: <span className="font-bold text-signal">{(implantation ?? result.minSetting).toFixed(2)}m</span>
                       </div>
                       <div className="flex items-center gap-1.5 rounded border border-border bg-panel-deep/90 px-2 py-1 font-mono text-[9px] text-foreground backdrop-blur-sm sm:px-3 sm:py-1.5 sm:text-[10px]">
                         STEP C: <span className="font-bold text-signal">{result.superBlock.stepC.toFixed(2)}m</span>
@@ -1332,16 +1428,49 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
               {/* Tab 1: Multi-Soil Dynamic Foundation Matrix */}
               {activeTab === 'matrix' && (
                 <div className="space-y-4">
+                  {/* Active RDSO Employment Schedule & Foundation Matrix Banner */}
+                  <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-lg border border-primary/40 bg-panel-deep p-3.5 text-xs shadow-sm">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex size-8 shrink-0 items-center justify-center rounded bg-primary/20 text-primary">
+                        <FileText className="size-4" />
+                      </div>
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2 font-bold text-foreground">
+                          <span>{result.sheetInfo.sheetDrawing}</span>
+                          <Badge variant="outline" className="border-signal/50 text-signal font-mono text-[9px] bg-signal/10">
+                            {wind} kgf/m² ({result.sheetInfo.windSpeed})
+                          </Badge>
+                          <Badge variant="outline" className="border-primary/40 text-primary font-mono text-[9px] bg-primary/10">
+                            {result.sheetInfo.implantationTier}
+                          </Badge>
+                        </div>
+                        <div className="text-[10.5px] text-muted-foreground mt-0.5">
+                          Section: <strong className="text-foreground">{result.sheetInfo.tableSection}</strong> · {result.sheetInfo.implantationDesc}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3 font-mono text-[10.5px]">
+                      <div>
+                        <span className="text-muted-foreground">FBM Code: </span>
+                        <strong className="text-primary font-bold">{result.fbmCode}</strong>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Reverse Deflection: </span>
+                        <strong className="text-signal font-bold">{result.deflectionDirection}</strong>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Mode A: Responsive Mobile Cards View (Best UX on small screens!) */}
                   {matrixDisplayMode === 'cards' ? (
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                       {[
-                        { key: 'bType' as const, item: result.foundations.bType, imageTag: 'Image 3 (DRG TI/CIV/FND/RDSO/00001/12/0 SHEET-1)' },
-                        { key: 'hbType' as const, item: result.foundations.hbType, imageTag: 'Image 1 (KEC SHEET NO. 01 Hard Soil)' },
-                        { key: 'bgType' as const, item: result.foundations.bgType, imageTag: 'Image 4 (DRG TI/CIV/FND/RDSO/00001/12/0 SHEET-1)' },
-                        { key: 'ngType' as const, item: result.foundations.ngType, imageTag: 'Image 5 (DRG TI/CIV/FND/RDSO/00001/12/0 SHEET-2)' },
-                        { key: 'nbcType' as const, item: result.foundations.nbcType, imageTag: 'Image 2 (KEC SHEET NO. 02 Dry Black Cotton)' },
-                        { key: 'wbcType' as const, item: result.foundations.wbcType, imageTag: 'Image 2 (KEC SHEET NO. 02 Wet Black Cotton)' },
+                        { key: 'bType' as const, item: result.foundations.bType, imageTag: 'Image 3 / Page 01 (DRG TI/CIV/FND/RDSO/00001/12/0 SHEET-1 Normal Soil)' },
+                        { key: 'hbType' as const, item: result.foundations.hbType, imageTag: 'PDF 2 Page 02 (DRG TI/CIV/FND/RDSO/00001/12/0 SHEET-1 Hard Soil)' },
+                        { key: 'bgType' as const, item: result.foundations.bgType, imageTag: 'Image 4 / Page 03 (DRG TI/CIV/FND/RDSO/00001/12/0 SHEET-1 Side Gravity)' },
+                        { key: 'ngType' as const, item: result.foundations.ngType, imageTag: 'Image 5 / Page 05 (DRG TI/CIV/FND/RDSO/00001/12/0 SHEET-2 Pure Gravity)' },
+                        { key: 'nbcType' as const, item: result.foundations.nbcType, imageTag: 'PDF 2 Page 06 (DRG TI/CIV/FND/RDSO/00001/12/0 SHEET-3 Dry BC)' },
+                        { key: 'wbcType' as const, item: result.foundations.wbcType, imageTag: 'PDF 2 Page 04 (DRG TI/CIV/FND/RDSO/00001/12/0 SHEET-1 Wet BC)' },
                       ].map(({ key, item, imageTag }) => {
                         const isSelected = selectedFoundationType === key;
                         return (
