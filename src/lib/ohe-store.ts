@@ -1,8 +1,10 @@
 import { create } from 'zustand';
-import type { Alignment, ImplantationMode, OheConfig, Role } from './ohe-rules';
+import type { Alignment, FoundationTypeKey, ImplantationMode, OheConfig, Role } from './ohe-rules';
 
 export interface OheState extends OheConfig {
   activeStep: number;
+  selectedFoundationType: FoundationTypeKey; // 'bType' (Image 3), 'bgType' (Image 4), 'ngType' (Image 5), etc.
+  setSelectedFoundationType: (type: FoundationTypeKey) => void;
   setWind: (wind: number) => void;
   setImplantationMode: (mode: ImplantationMode) => void;
   setImplantation: (val: number) => void;
@@ -29,7 +31,10 @@ const initialDefaults: OheConfig = {
 
 export const useOheStore = create<OheState>((set) => ({
   ...initialDefaults,
-  activeStep: 5, // fully configured by default so user can immediately see everything or adjust step-by-step
+  activeStep: 5, // fully configured by default
+  selectedFoundationType: 'bType', // default to B-Type Side Bearing (Image 3)
+
+  setSelectedFoundationType: (selectedFoundationType) => set({ selectedFoundationType }),
 
   setWind: (wind) =>
     set((state) => ({
