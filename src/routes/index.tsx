@@ -132,6 +132,8 @@ function ConfiguratorPage() {
     radius,
     span,
     role,
+    mastPreference,
+    setMastPreference,
     selectedFoundationType,
     setSelectedFoundationType,
     setWind,
@@ -172,8 +174,9 @@ function ConfiguratorPage() {
         radius,
         span,
         role,
+        mastPreference,
       }),
-    [wind, implantationMode, implantation, stepLevel, alignment, radius, span, role]
+    [wind, implantationMode, implantation, stepLevel, alignment, radius, span, role, mastPreference]
   );
 
   const copyTechnicalSummary = async () => {
@@ -268,10 +271,11 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
             <Button
               variant="outline"
               size="sm"
-              onClick={() => loadPreset('sample')}
-              className="hidden border-border bg-panel text-xs hover:border-primary/50 md:inline-flex"
+              onClick={() => loadPreset('rdso-178')}
+              className="hidden border-border bg-panel text-xs hover:border-signal/50 md:inline-flex font-mono"
+              title="Load 178 kgf/m², Implantation 3.5m, Cess C=0.90m, Mast B-200, FBM 168, BG-9"
             >
-              <Sparkles className="size-3.5 text-signal" /> Sample
+              <Sparkles className="size-3.5 text-signal mr-1" /> RDSO 178 (Img 1 & 2)
             </Button>
 
             <Button
@@ -689,14 +693,67 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                       className="py-1"
                     />
 
+                    {/* Cess Level Guidance Banner & Recommended Foundation by Cess */}
+                    <div className="rounded border border-primary/30 bg-primary/10 p-2.5 text-[11px] space-y-1.5">
+                      <div className="flex flex-wrap items-center justify-between gap-1 font-bold text-foreground">
+                        <span className="flex items-center gap-1.5 text-primary">
+                          <CheckCircle2 className="size-3.5 text-primary" />
+                          Recommended Foundation: {result.recommendedFoundation.typeName}
+                        </span>
+                        <Badge
+                          variant="outline"
+                          className={`font-mono text-[9px] ${
+                            result.recommendedFoundation.typeKey === 'bgType'
+                              ? 'border-signal bg-signal/20 text-signal font-bold'
+                              : 'border-primary/40 text-primary'
+                          }`}
+                        >
+                          {result.recommendedFoundation.soilPressure}
+                        </Badge>
+                      </div>
+                      <p className="text-[10px] leading-tight text-muted-foreground">
+                        {result.recommendedFoundation.reason}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-1.5 pt-1 font-mono text-[9px]">
+                        <span
+                          className={`rounded px-1.5 py-0.5 border transition-all ${
+                            stepLevel <= 0.70
+                              ? 'border-signal bg-signal/20 text-signal font-bold shadow-sm'
+                              : 'border-border bg-panel-deep text-muted-foreground'
+                          }`}
+                        >
+                          C ≤ 0.70m: B-Type (Normal Ground)
+                        </span>
+                        <span
+                          className={`rounded px-1.5 py-0.5 border transition-all ${
+                            stepLevel > 0.70 && stepLevel <= 1.00
+                              ? 'border-signal bg-signal/20 text-signal font-bold shadow-sm'
+                              : 'border-border bg-panel-deep text-muted-foreground'
+                          }`}
+                        >
+                          0.70m &lt; C ≤ 1.00m: BG-Type (High Cess / Slope)
+                        </span>
+                        <span
+                          className={`rounded px-1.5 py-0.5 border transition-all ${
+                            stepLevel > 1.00
+                              ? 'border-signal bg-signal/20 text-signal font-bold shadow-sm'
+                              : 'border-border bg-panel-deep text-muted-foreground'
+                          }`}
+                        >
+                          C &gt; 1.00m: NG-Type (Pure Gravity)
+                        </span>
+                      </div>
+                    </div>
+
                     {/* Quick Step Presets for Easy Mobile Selection */}
                     <div className="flex flex-wrap gap-1.5 pt-1">
                       {[
                         { val: 0.0, label: '0.00m (Flush)' },
-                        { val: 0.5, label: '0.50m (Std)' },
-                        { val: 0.8, label: '0.80m' },
-                        { val: 1.2, label: '1.20m (Excess)' },
-                        { val: 1.6, label: '1.60m' },
+                        { val: 0.5, label: '0.50m (B-Type Normal)' },
+                        { val: 0.7, label: '0.70m (B-Type Max)' },
+                        { val: 0.9, label: '0.90m (BG-Type High Cess)' },
+                        { val: 1.2, label: '1.20m (NG-Type Deep Cess)' },
+                        { val: 1.6, label: '1.60m (Extreme SB)' },
                       ].map((preset) => (
                         <button
                           key={preset.val}
@@ -1017,6 +1074,56 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                         </button>
                       );
                     })}
+                  </div>
+
+                  {/* B-Series Mast Size Selector & RDSO Schedule Auto Resolution */}
+                  <div className="mt-3 rounded border border-border/80 bg-panel p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground">
+                        B-Series Mast Section (PDF 1 Employment Schedule Columns)
+                      </span>
+                      <span className="font-mono text-[10px] text-signal font-bold">
+                        {result.mastSection.split(' (')[0]}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        { id: 'auto' as const, label: 'Auto (RDSO Schedule Rec.)' },
+                        { id: 'B-175' as const, label: 'B-175 (175 mm)' },
+                        { id: 'B-200' as const, label: 'B-200 (200 mm)' },
+                        { id: 'B-225' as const, label: 'B-225 (225 mm)' },
+                        { id: 'B-250' as const, label: 'B-250 (250 mm)' },
+                      ].map((item) => {
+                        const isSelected = (mastPreference ?? 'auto') === item.id;
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => setMastPreference(item.id)}
+                            className={`rounded border px-2.5 py-1 font-mono text-[10px] transition-all ${
+                              isSelected
+                                ? 'border-primary bg-primary text-primary-foreground font-bold shadow-sm'
+                                : 'border-border bg-panel-deep text-muted-foreground hover:text-foreground'
+                            }`}
+                          >
+                            {item.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-1 text-[10px] text-muted-foreground pt-1 border-t border-border/50">
+                      <span>
+                        FBM Code: <strong className="text-primary font-bold">{result.fbmCode}</strong>
+                      </span>
+                      <span>
+                        Reverse Deflection: <strong className="text-signal font-bold">{result.deflectionDirection}</strong>
+                      </span>
+                      <span>
+                        Embedment: <strong className="text-foreground font-mono">{result.mastLengthEmbedded}m</strong>
+                      </span>
+                    </div>
                   </div>
                 </div>
               </section>
@@ -1458,6 +1565,83 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                         <span className="text-muted-foreground">Reverse Deflection: </span>
                         <strong className="text-signal font-bold">{result.deflectionDirection}</strong>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* KEC Volume Chart Sheet No. 01 Equivalent Foundation Sizing (Image 2) */}
+                  <div className="rounded-lg border border-border bg-panel overflow-hidden shadow-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-panel-deep px-3.5 py-2.5">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="border-signal/50 bg-signal/10 text-signal font-mono text-[9px] font-bold">
+                          KEC Sheet No. 01 (Image 2)
+                        </Badge>
+                        <span className="font-bold text-xs text-foreground">
+                          Equivalent Foundation Sizes for FDN Code {result.fbmCode} (Contract Agreement RVNL/ELECT/JHS/CWA-KAV/RE)
+                        </span>
+                      </div>
+                      <Badge variant="secondary" className="font-mono text-[9px]">
+                        Soil Design: 11,000 kgf/m²
+                      </Badge>
+                    </div>
+
+                    <div className="overflow-x-auto p-3">
+                      <table className="w-full text-center font-mono text-[10.5px]">
+                        <thead>
+                          <tr className="border-b border-border text-[9.5px] uppercase text-muted-foreground">
+                            <th className="pb-2 text-left">FDN Code</th>
+                            <th className="pb-2">Direct Load</th>
+                            <th className="pb-2">Bending Moment</th>
+                            <th className={`pb-2 px-1.5 ${stepLevel <= 0.70 ? 'text-signal font-bold' : ''}`}>
+                              Side Bearing 11k {stepLevel <= 0.70 && '★ (C ≤ 0.7m)'}
+                            </th>
+                            <th className="pb-2 px-1.5">Hard Soil 21.5k</th>
+                            <th className="pb-2 px-1.5">Side Gravity 8k</th>
+                            <th className={`pb-2 px-1.5 ${stepLevel > 0.70 && stepLevel <= 1.00 ? 'text-signal font-bold' : ''}`}>
+                              Side Gravity 11k {stepLevel > 0.70 && stepLevel <= 1.00 && '★ (0.7m < C ≤ 1.0m)'}
+                            </th>
+                            <th className="pb-2 px-1.5">Pure Gravity 8k</th>
+                            <th className={`pb-2 px-1.5 ${stepLevel > 1.00 ? 'text-signal font-bold' : ''}`}>
+                              Pure Gravity 11k {stepLevel > 1.00 && '★ (C > 1.0m)'}
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr className="divide-x divide-border/40 font-bold">
+                            <td className="py-2.5 text-left text-primary">{result.fbmCode}</td>
+                            <td className="py-2.5">{result.activeKecRow.load} kg</td>
+                            <td className="py-2.5">{result.activeKecRow.moment} kg·m</td>
+                            <td className={`py-2.5 px-2 ${stepLevel <= 0.70 ? 'bg-signal/20 text-signal ring-2 ring-signal font-black' : 'text-foreground'}`}>
+                              {result.activeKecRow.b}
+                            </td>
+                            <td className="py-2.5 px-2 text-muted-foreground">{result.activeKecRow.hb}</td>
+                            <td className="py-2.5 px-2 text-muted-foreground">{result.activeKecRow.bg8k}</td>
+                            <td className={`py-2.5 px-2 ${stepLevel > 0.70 && stepLevel <= 1.00 ? 'bg-signal/20 text-signal ring-2 ring-signal font-black' : 'text-foreground'}`}>
+                              {result.activeKecRow.bg11k}
+                            </td>
+                            <td className="py-2.5 px-2 text-muted-foreground">{result.activeKecRow.mg8k}</td>
+                            <td className={`py-2.5 px-2 ${stepLevel > 1.00 ? 'bg-signal/20 text-signal ring-2 ring-signal font-black' : 'text-foreground'}`}>
+                              {result.activeKecRow.mg11k}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="border-t border-border bg-panel-deep/50 px-3.5 py-2 text-[10px] text-muted-foreground flex flex-wrap items-center justify-between gap-1">
+                      <span>
+                        Active Cess Level: <strong className="text-foreground">C = {result.superBlock.stepC.toFixed(2)} m</strong> ➔ Recommended Foundation:{' '}
+                        <strong className="text-signal">{result.recommendedFoundation.typeName}</strong> ({result.recommendedFoundation.reference})
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedFoundationType(result.recommendedFoundation.typeKey);
+                          setMobileTab('viewport');
+                        }}
+                        className="rounded bg-signal px-2 py-0.5 text-signal-foreground font-bold text-[9.5px] hover:bg-signal/90 transition-colors shadow-sm"
+                      >
+                        Inspect {result.recommendedFoundation.reference} in 3D Twin
+                      </button>
                     </div>
                   </div>
 
