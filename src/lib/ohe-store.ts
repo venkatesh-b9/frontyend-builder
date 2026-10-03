@@ -26,7 +26,7 @@ export interface OheState extends OheConfig {
   setRole: (role: Role) => void;
   setActiveStep: (step: number) => void;
   reset: () => void;
-  loadPreset: (presetName: 'sample' | 'heavy' | 'bwa' | 'excess-step' | 'rdso-178') => void;
+  loadPreset: (presetName: 'sample' | 'heavy' | 'bwa' | 'excess-step' | 'rdso-178' | 'standard-105' | 'curve-800') => void;
 }
 
 const initialDefaults: OheConfig = {
@@ -264,7 +264,37 @@ export const useOheStore = create<OheState>((set) => ({
         radius: 0,
         span: 58.5,
         role: 'N/NACC',
-        selectedFoundationType: 'ngType', // NG-31 for C = 1.20m
+        selectedFoundationType: 'ngType',
+        mastPreference: 'auto',
+        activeStep: 5,
+      });
+    } else if (presetName === 'standard-105') {
+      set({
+        wind: 105,
+        implantationMode: 'standard',
+        implantation: 2.80,
+        stepLevel: 0.40,
+        shoulderWidth: 0.60,
+        alignment: 'tangent',
+        radius: 0,
+        span: 72.0,
+        role: 'N/NACC',
+        selectedFoundationType: 'bType',
+        mastPreference: 'auto',
+        activeStep: 5,
+      });
+    } else if (presetName === 'curve-800') {
+      set({
+        wind: 178,
+        implantationMode: 'custom',
+        implantation: 3.50,
+        stepLevel: 0.60,
+        shoulderWidth: 0.60,
+        alignment: 'inside',
+        radius: 800,
+        span: 45.0,
+        role: 'N/NACC',
+        selectedFoundationType: 'bType',
         mastPreference: 'auto',
         activeStep: 5,
       });

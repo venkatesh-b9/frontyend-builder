@@ -5,9 +5,13 @@ import {
   AlertOctagon,
   AlertTriangle,
   ArrowDownToLine,
+  ArrowRight,
+  BookOpen,
   Box,
   Check,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   CircleDot,
   Compass,
   Copy,
@@ -121,6 +125,245 @@ function StepHeader({
   );
 }
 
+function QuickGuideModal({
+  open,
+  onClose,
+  onLoadPreset,
+  onSwitchTab,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onLoadPreset: (preset: 'sample' | 'heavy' | 'bwa' | 'excess-step' | 'rdso-178' | 'standard-105' | 'curve-800') => void;
+  onSwitchTab: (tab: MobileTab) => void;
+}) {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/85 p-3 backdrop-blur-md sm:p-6 animate-in fade-in duration-200">
+      <div className="relative flex max-h-[92vh] w-full max-w-2xl flex-col rounded-xl border border-border bg-panel shadow-2xl overflow-hidden">
+        {/* Modal Header */}
+        <div className="flex items-center justify-between border-b border-border bg-panel-deep px-4 py-3 sm:px-6">
+          <div className="flex items-center gap-2.5">
+            <div className="flex size-8 items-center justify-center rounded bg-primary text-primary-foreground">
+              <BookOpen className="size-4" />
+            </div>
+            <div>
+              <h2 className="font-display text-sm sm:text-base font-bold uppercase text-foreground">
+                RDSO OHE Configurator — Field Guide
+              </h2>
+              <p className="font-mono text-[10px] text-muted-foreground">
+                Indian Railways Electrification Rules & 4-Step Engineering Walkthrough
+              </p>
+            </div>
+          </div>
+          <Button variant="ghost" size="icon" onClick={onClose} className="size-8 rounded-full">
+            <X className="size-4" />
+          </Button>
+        </div>
+
+        {/* Modal Body (Scrollable) */}
+        <div className="overflow-y-auto p-4 sm:p-6 space-y-4 font-sans text-xs text-foreground">
+          {/* Section 1: Wind Zone */}
+          <div className="rounded-lg border border-border/80 bg-panel-deep/50 p-3.5 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 font-bold text-primary uppercase text-xs">
+                <Wind className="size-4" />
+                <span>1. Wind Pressure Zone (IS:875 / RDSO)</span>
+              </div>
+              <Badge variant="outline" className="border-border text-[9px]">IS:875</Badge>
+            </div>
+            <p className="text-[11px] leading-relaxed text-muted-foreground">
+              Wind pressure ranges from <strong>73 kgf/m² (Light - 33 m/s)</strong> to <strong>216 kgf/m² (Severe II - 55 m/s)</strong>.
+              Wind exerts aerodynamic transverse forces on the catenary, contact wire, and mast surface, producing an overturning
+              moment at foundation base. Higher wind pressure requires larger mast sections (B-200, B-225) and higher FBM codes.
+            </p>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  onLoadPreset('standard-105');
+                  onClose();
+                }}
+                className="h-7 text-[10px] font-mono border-border bg-panel hover:border-primary/50"
+              >
+                ⚡ Try Standard 105 kgf/m²
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  onLoadPreset('rdso-178');
+                  onClose();
+                }}
+                className="h-7 text-[10px] font-mono border-signal/50 bg-signal/10 text-signal hover:bg-signal/20"
+              >
+                ⚡ Try Severe 178 kgf/m² (Image 1 & 2)
+              </Button>
+            </div>
+          </div>
+
+          {/* Section 2: Implantation & Cess Step C */}
+          <div className="rounded-lg border border-border/80 bg-panel-deep/50 p-3.5 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 font-bold text-signal uppercase text-xs">
+                <Ruler className="size-4" />
+                <span>2. Implantation & Cess Step Level Difference (C)</span>
+              </div>
+              <Badge variant="outline" className="border-border text-[9px]">ACTM Vol-II</Badge>
+            </div>
+            <p className="text-[11px] leading-relaxed text-muted-foreground">
+              <strong>Setting Distance (Implantation):</strong> Distance from track center to the mast inner face.
+              Standard is <strong>3.00 m</strong> (minimum 2.80 m). If implantation exceeds <strong>3.80 m</strong>, an RDSO
+              <strong>Cantilever Adaptor Chair (ETI/OHE/P/3131)</strong> is mandatory.
+            </p>
+            <p className="text-[11px] leading-relaxed text-muted-foreground">
+              <strong>Cess Step Level (C):</strong> Vertical drop from Rail Level (RL) to foundation ground level.
+              Standard is C ≤ 0.50 m. If C exceeds 0.50 m, ACTM Vol-II Clause 3.5.14 mandates casting a monolithic
+              concrete <strong>Super Block (Height = C - 0.50 m)</strong> to prevent the mast from exceeding 1.850 m below RL.
+            </p>
+            <p className="text-[11px] leading-relaxed text-muted-foreground">
+              <strong>Cess Shoulder Width (e):</strong> Distance from foundation to slope edge. If e &lt; 0.50 m, earth cannot resist side bearing, requiring
+              <strong>BG-Type (Side Gravity)</strong> or <strong>NG-Type (Pure Gravity)</strong> foundations.
+            </p>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  onLoadPreset('heavy');
+                  onClose();
+                }}
+                className="h-7 text-[10px] font-mono border-border bg-panel hover:border-signal/50"
+              >
+                ⚡ Try High Cess (BG-9 Side Gravity)
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  onLoadPreset('excess-step');
+                  onClose();
+                }}
+                className="h-7 text-[10px] font-mono border-signal/50 bg-signal/10 text-signal hover:bg-signal/20"
+              >
+                ⚡ Try Excess Cess C=1.2m (Super Block + NG-31)
+              </Button>
+            </div>
+          </div>
+
+          {/* Section 3: Curvature & Auto-Span */}
+          <div className="rounded-lg border border-border/80 bg-panel-deep/50 p-3.5 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 font-bold text-primary uppercase text-xs">
+                <Compass className="size-4" />
+                <span>3. Curvature & PDF 1 Auto-Span Coupling</span>
+              </div>
+              <Badge variant="outline" className="border-border text-[9px]">PDF 1 Schedule</Badge>
+            </div>
+            <p className="text-[11px] leading-relaxed text-muted-foreground">
+              Straight tangent tracks permit the longest spans (e.g. 58.5 m for 178 kgf/m² or 72.0 m for 105 kgf/m²).
+              On curved tracks, as radius decreases (e.g. 800 m, 500 m), the catenary versine (S² / 8R) increases.
+              The configurator automatically couples with the RDSO Employment Schedule to limit permissible span.
+            </p>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  onLoadPreset('curve-800');
+                  onClose();
+                }}
+                className="h-7 text-[10px] font-mono border-border bg-panel hover:border-primary/50"
+              >
+                ⚡ Try Inside Curve (R = 800 m)
+              </Button>
+            </div>
+          </div>
+
+          {/* Section 4: Mast Functions & 3D Accessories */}
+          <div className="rounded-lg border border-border/80 bg-panel-deep/50 p-3.5 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 font-bold text-signal uppercase text-xs">
+                <Layers3 className="size-4" />
+                <span>4. Mast Functions & 3D Digital Twin Equipment</span>
+              </div>
+              <Badge variant="outline" className="border-border text-[9px]">Reactive Core</Badge>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10.5px]">
+              <div className="rounded bg-panel p-2 border border-border">
+                <strong className="text-foreground">N / NACC (Intermediate):</strong> Single bracket cantilever, +30 mm reverse deflection away from track.
+              </div>
+              <div className="rounded bg-panel p-2 border border-border">
+                <strong className="text-foreground">ACC (Anti-Creep Center):</strong> Bridging struts, center catenary clamp, longitudinal wire.
+              </div>
+              <div className="rounded bg-panel p-2 border border-border">
+                <strong className="text-foreground">ACA (Anti-Creep Anchor):</strong> 45° guy wire down to ground concrete block with strain insulator.
+              </div>
+              <div className="rounded bg-panel p-2 border border-border">
+                <strong className="text-foreground">OLC / OLI (Overlap):</strong> Dual parallel cantilevers (in-run 5.60m, out-of-run 5.75m).
+              </div>
+              <div className="rounded bg-panel p-2 border border-border sm:col-span-2">
+                <strong className="text-foreground">OLA / BWA (Balance Weight Anchor):</strong> Heavy B-225/B-250 mast, 3-pulley ATD winch, 14 counterweight discs, guy wire anchor block, -30 mm reverse deflection towards track.
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  onLoadPreset('bwa');
+                  onSwitchTab('viewport');
+                  onClose();
+                }}
+                className="h-7 text-[10px] font-mono border-signal/50 bg-signal/10 text-signal hover:bg-signal/20"
+              >
+                ⚡ Inspect BWA Anchor Mast in 3D
+              </Button>
+            </div>
+          </div>
+
+          {/* Section 5: Foundation Types */}
+          <div className="rounded-lg border border-border/80 bg-panel-deep/50 p-3.5 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 font-bold text-primary uppercase text-xs">
+                <Box className="size-4" />
+                <span>5. Foundations (Images 3, 4, 5 & KEC Sheet 01)</span>
+              </div>
+              <Badge variant="outline" className="border-border text-[9px]">11,000 kgf/m²</Badge>
+            </div>
+            <p className="text-[11px] leading-relaxed text-muted-foreground">
+              Foundations resist overturning via soil side bearing or deadweight gravity:
+            </p>
+            <ul className="list-disc list-inside space-y-1 text-[10.5px] text-muted-foreground font-mono">
+              <li><strong>B-Type (Image 3):</strong> Side Bearing. Compact block in firm soil with flat cess (C ≤ 0.70m, e ≥ 0.50m).</li>
+              <li><strong>BG-Type (Image 4):</strong> Side Gravity. Stepped gravity mass for sloped cess (0.70m &lt; C ≤ 1.00m or e &lt; 0.50m).</li>
+              <li><strong>NG-Type (Image 5):</strong> Pure Gravity. Deep pyramid block for loose soils or deep cess drops (C &gt; 1.00m or e &lt; 0.20m).</li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Modal Footer */}
+        <div className="flex items-center justify-between border-t border-border bg-panel-deep px-4 py-3 sm:px-6">
+          <Button variant="outline" size="sm" onClick={onClose} className="h-8 text-xs">
+            Close Guide
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => {
+              onClose();
+              onSwitchTab('viewport');
+            }}
+            className="h-8 bg-primary text-primary-foreground text-xs font-bold"
+          >
+            Explore in 3D Twin <ArrowRight className="size-3.5 ml-1.5" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ConfiguratorPage() {
   const state = useOheStore();
   const {
@@ -157,6 +400,8 @@ function ConfiguratorPage() {
   const [matrixDisplayMode, setMatrixDisplayMode] = useState<'cards' | 'table'>('cards');
   const [activeTab, setActiveTab] = useState<'matrix' | 'specifications' | 'rdso-notes'>('matrix');
   const [mobileActionsOpen, setMobileActionsOpen] = useState<boolean>(false);
+  const [showQuickGuide, setShowQuickGuide] = useState<boolean>(false);
+  const [showFullSoilMatrixMobile, setShowFullSoilMatrixMobile] = useState<boolean>(false);
 
   // Sequential validation checks
   const step1Done = wind !== null;
@@ -275,6 +520,16 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
             <Button
               variant="outline"
               size="sm"
+              onClick={() => setShowQuickGuide(true)}
+              className="border-primary/40 bg-primary/10 text-xs font-mono text-primary hover:bg-primary/20 sm:inline-flex"
+              title="Open Beginner-Friendly Field Guide & Engineering Walkthrough"
+            >
+              <BookOpen className="size-3.5 mr-1" /> Field Guide
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => loadPreset('rdso-178')}
               className="hidden border-border bg-panel text-xs hover:border-signal/50 md:inline-flex font-mono"
               title="Load 178 kgf/m², Implantation 3.5m, Cess C=0.90m, Mast B-200, FBM 168, BG-9"
@@ -330,12 +585,34 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  loadPreset('sample');
+                  setShowQuickGuide(true);
+                  setMobileActionsOpen(false);
+                }}
+                className="justify-start border-primary/40 bg-primary/10 text-xs text-primary font-bold"
+              >
+                <BookOpen className="size-3.5 mr-1.5" /> 🎓 Field Guide
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  loadPreset('rdso-178');
+                  setMobileActionsOpen(false);
+                }}
+                className="justify-start border-signal/40 bg-signal/10 text-xs text-signal font-bold"
+              >
+                <Sparkles className="size-3.5 mr-1.5" /> RDSO 178 (Img 1 & 2)
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  loadPreset('heavy');
                   setMobileActionsOpen(false);
                 }}
                 className="justify-start border-border bg-panel-deep text-xs"
               >
-                <Sparkles className="size-3.5 text-signal mr-1.5" /> Standard Preset
+                <Layers className="size-3.5 text-primary mr-1.5" /> High Cess (BG-9)
               </Button>
               <Button
                 variant="outline"
@@ -346,7 +623,18 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                 }}
                 className="justify-start border-border bg-panel-deep text-xs"
               >
-                <Box className="size-3.5 text-signal mr-1.5" /> Excess Step (C=1.2m)
+                <Box className="size-3.5 text-signal mr-1.5" /> Super Block (C=1.2m)
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  loadPreset('bwa');
+                  setMobileActionsOpen(false);
+                }}
+                className="justify-start border-border bg-panel-deep text-xs"
+              >
+                <Compass className="size-3.5 text-signal mr-1.5" /> Anchor BWA Mast
               </Button>
               <Button
                 variant="outline"
@@ -357,7 +645,7 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                 }}
                 className="justify-start border-border bg-panel-deep text-xs"
               >
-                <Copy className="size-3.5 mr-1.5" /> Copy Specification
+                <Copy className="size-3.5 mr-1.5" /> Copy Specs
               </Button>
               <Button
                 variant="outline"
@@ -366,13 +654,73 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                   reset();
                   setMobileActionsOpen(false);
                 }}
-                className="justify-start border-border bg-panel-deep text-xs text-destructive hover:text-destructive"
+                className="col-span-2 justify-start border-border bg-panel-deep text-xs text-destructive hover:text-destructive"
               >
                 <RotateCcw className="size-3.5 mr-1.5" /> Reset Wizard
               </Button>
             </div>
           </div>
         )}
+
+        {/* Mobile & Tablet Quick Preset Carousel Bar */}
+        <div className="no-print flex items-center gap-1.5 overflow-x-auto border-b border-border bg-panel/80 px-3 py-1.5 text-xs no-scrollbar lg:hidden">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => loadPreset('rdso-178')}
+            className="h-7 shrink-0 border-signal/50 bg-signal/10 px-2 font-mono text-[10px] text-signal font-bold hover:bg-signal/20"
+          >
+            <Sparkles className="size-3 mr-1" /> RDSO 178 (Img 1 & 2)
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => loadPreset('heavy')}
+            className="h-7 shrink-0 border-border bg-panel-deep px-2 font-mono text-[10px] hover:border-signal/50"
+          >
+            <Layers className="size-3 text-primary mr-1" /> High Cess (BG-9)
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => loadPreset('bwa')}
+            className="h-7 shrink-0 border-border bg-panel-deep px-2 font-mono text-[10px] hover:border-signal/50"
+          >
+            <Compass className="size-3 text-signal mr-1" /> Anchor BWA
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => loadPreset('excess-step')}
+            className="h-7 shrink-0 border-border bg-panel-deep px-2 font-mono text-[10px] hover:border-signal/50"
+          >
+            <Box className="size-3 text-signal mr-1" /> Super Block (C=1.2m)
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => loadPreset('curve-800')}
+            className="h-7 shrink-0 border-border bg-panel-deep px-2 font-mono text-[10px] hover:border-signal/50"
+          >
+            <TrainFront className="size-3 text-primary mr-1" /> Curve 800m
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => loadPreset('standard-105')}
+            className="h-7 shrink-0 border-border bg-panel-deep px-2 font-mono text-[10px] hover:border-signal/50"
+          >
+            <Wind className="size-3 text-muted-foreground mr-1" /> 105kg Std
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowQuickGuide(true)}
+            className="h-7 shrink-0 border-primary/40 bg-primary/10 px-2 font-mono text-[10px] text-primary font-bold hover:bg-primary/20"
+          >
+            <BookOpen className="size-3 mr-1" /> 🎓 Field Guide
+          </Button>
+        </div>
 
         {/* Mobile Dedicated Segmented Tab Bar (Visible on mobile/tablet screens < lg) */}
         <div className="no-print sticky top-0 z-20 flex border-b border-border bg-panel-deep lg:hidden">
@@ -431,7 +779,7 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
         <div className="no-print flex flex-col lg:h-[calc(100vh-64px)] lg:flex-row lg:overflow-hidden">
           {/* Left Column: Sequential Engineering Wizard */}
           <aside
-            className={`w-full shrink-0 border-b border-border bg-panel lg:w-[470px] xl:w-[500px] lg:border-b-0 lg:border-r lg:overflow-y-auto ${
+            className={`w-full shrink-0 border-b border-border bg-panel lg:w-[470px] xl:w-[500px] lg:border-b-0 lg:border-r lg:overflow-y-auto pb-24 lg:pb-0 ${
               mobileTab === 'wizard' ? 'block' : 'hidden lg:block'
             }`}
           >
@@ -578,7 +926,19 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                       <label className="text-[11px] font-semibold uppercase text-muted-foreground">
                         Implantation Setting Distance (m)
                       </label>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setImplantationMode('custom');
+                            const cur = implantation ?? result.minSetting;
+                            setImplantation(Math.max(2.5, Math.round((cur - 0.1) * 20) / 20));
+                          }}
+                          className="flex size-7 items-center justify-center rounded border border-border bg-panel-deep font-mono text-sm font-bold text-muted-foreground hover:bg-panel hover:text-foreground active:scale-95"
+                          title="Decrease Implantation (-0.1m)"
+                        >
+                          -
+                        </button>
                         <Input
                           type="number"
                           min={2.5}
@@ -592,8 +952,20 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                               setImplantation(val);
                             }
                           }}
-                          className="h-8 w-20 border-border bg-panel-deep text-right font-mono text-xs"
+                          className="h-8 w-16 border-border bg-panel-deep text-center font-mono text-xs"
                         />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setImplantationMode('custom');
+                            const cur = implantation ?? result.minSetting;
+                            setImplantation(Math.min(5.0, Math.round((cur + 0.1) * 20) / 20));
+                          }}
+                          className="flex size-7 items-center justify-center rounded border border-border bg-panel-deep font-mono text-sm font-bold text-muted-foreground hover:bg-panel hover:text-foreground active:scale-95"
+                          title="Increase Implantation (+0.1m)"
+                        >
+                          +
+                        </button>
                         <span className="font-mono text-xs text-muted-foreground">m</span>
                       </div>
                     </div>
@@ -671,7 +1043,18 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                           </TooltipContent>
                         </Tooltip>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const cur = stepLevel ?? 0.5;
+                            setStepLevel(Math.max(0.0, Math.round((cur - 0.05) * 20) / 20));
+                          }}
+                          className="flex size-7 items-center justify-center rounded border border-border bg-panel-deep font-mono text-sm font-bold text-muted-foreground hover:bg-panel hover:text-foreground active:scale-95"
+                          title="Decrease Cess Step (-0.05m)"
+                        >
+                          -
+                        </button>
                         <Input
                           type="number"
                           min={0.0}
@@ -682,8 +1065,19 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                             const val = parseFloat(e.target.value);
                             if (!isNaN(val)) setStepLevel(val);
                           }}
-                          className="h-8 w-20 border-border bg-panel-deep text-right font-mono text-xs"
+                          className="h-8 w-16 border-border bg-panel-deep text-center font-mono text-xs"
                         />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const cur = stepLevel ?? 0.5;
+                            setStepLevel(Math.min(2.0, Math.round((cur + 0.05) * 20) / 20));
+                          }}
+                          className="flex size-7 items-center justify-center rounded border border-border bg-panel-deep font-mono text-sm font-bold text-muted-foreground hover:bg-panel hover:text-foreground active:scale-95"
+                          title="Increase Cess Step (+0.05m)"
+                        >
+                          +
+                        </button>
                         <span className="font-mono text-xs text-muted-foreground">m</span>
                       </div>
                     </div>
@@ -871,7 +1265,18 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                           </TooltipContent>
                         </Tooltip>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const cur = shoulderWidth ?? 0.60;
+                            setShoulderWidth(Math.max(0.05, Math.round((cur - 0.05) * 20) / 20));
+                          }}
+                          className="flex size-7 items-center justify-center rounded border border-border bg-panel-deep font-mono text-sm font-bold text-muted-foreground hover:bg-panel hover:text-foreground active:scale-95"
+                          title="Decrease Shoulder Width (-0.05m)"
+                        >
+                          -
+                        </button>
                         <Input
                           type="number"
                           min={0.05}
@@ -882,8 +1287,19 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                             const val = parseFloat(e.target.value);
                             if (!isNaN(val)) setShoulderWidth(val);
                           }}
-                          className="h-8 w-20 border-border bg-panel-deep text-right font-mono text-xs"
+                          className="h-8 w-16 border-border bg-panel-deep text-center font-mono text-xs"
                         />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const cur = shoulderWidth ?? 0.60;
+                            setShoulderWidth(Math.min(1.20, Math.round((cur + 0.05) * 20) / 20));
+                          }}
+                          className="flex size-7 items-center justify-center rounded border border-border bg-panel-deep font-mono text-sm font-bold text-muted-foreground hover:bg-panel hover:text-foreground active:scale-95"
+                          title="Increase Shoulder Width (+0.05m)"
+                        >
+                          +
+                        </button>
                         <span className="font-mono text-xs text-muted-foreground">m</span>
                       </div>
                     </div>
@@ -1223,7 +1639,83 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                       </Badge>
                     </div>
 
-                    <div className="overflow-x-auto p-2">
+                    {/* Mobile View: Touch-Friendly Responsive Cards (Visible on screens < sm) */}
+                    <div className="sm:hidden space-y-2 p-2.5">
+                      {result.allMastFunctions.map((mf) => {
+                        const isCurrent = role === mf.role;
+                        return (
+                          <div
+                            key={mf.role}
+                            className={`rounded-lg border p-3 transition-all ${
+                              isCurrent
+                                ? 'border-signal bg-signal/10 ring-1 ring-signal shadow-sm'
+                                : 'border-border bg-panel-deep/70 hover:border-border'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  {isCurrent && <span className="size-2 rounded-full bg-signal animate-pulse" />}
+                                  <span className={`font-mono text-xs font-bold ${isCurrent ? 'text-signal' : 'text-foreground'}`}>
+                                    {mf.roleLabel}
+                                  </span>
+                                  <span className="text-[10px] text-muted-foreground truncate max-w-[130px]">{mf.roleTitle}</span>
+                                </div>
+                                <div className="mt-1 font-mono text-[11px] font-semibold text-foreground">
+                                  {mf.mastSection}
+                                </div>
+                              </div>
+                              <div className="flex flex-col items-end shrink-0">
+                                <Badge variant="outline" className="border-primary/40 bg-primary/10 font-mono text-[10px] font-bold text-primary px-1.5 py-0">
+                                  FBM {mf.fbmCode}
+                                </Badge>
+                                <span className="mt-0.5 font-mono text-[9px] text-signal font-semibold">
+                                  {mf.reverseDeflection > 0 ? `+${mf.reverseDeflection}mm` : `${mf.reverseDeflection}mm`}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Foundations 3-way breakdown */}
+                            <div className="mt-2 grid grid-cols-3 gap-1 rounded bg-panel p-1.5 text-center font-mono text-[9px] border border-border/80">
+                              <div className={`rounded p-1 ${result.recommendedFoundation.typeKey === 'bType' ? 'bg-signal/20 text-signal font-black ring-1 ring-signal' : 'text-muted-foreground'}`}>
+                                <span className="block text-[8px] uppercase">B-Type</span>
+                                <span className="font-bold text-foreground">{mf.bFdn}</span>
+                              </div>
+                              <div className={`rounded p-1 ${result.recommendedFoundation.typeKey === 'bgType' ? 'bg-signal/20 text-signal font-black ring-1 ring-signal' : 'text-muted-foreground'}`}>
+                                <span className="block text-[8px] uppercase">BG-Type</span>
+                                <span className="font-bold text-foreground">{mf.bgFdn}</span>
+                              </div>
+                              <div className={`rounded p-1 ${result.recommendedFoundation.typeKey === 'ngType' ? 'bg-signal/20 text-signal font-black ring-1 ring-signal' : 'text-muted-foreground'}`}>
+                                <span className="block text-[8px] uppercase">NG-Type</span>
+                                <span className="font-bold text-foreground">{mf.ngFdn}</span>
+                              </div>
+                            </div>
+
+                            {/* 1-Tap 3D View Button */}
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={() => {
+                                setRole(mf.role);
+                                setSelectedFoundationType(mf.recommendedTypeKey);
+                                setMobileTab('viewport');
+                              }}
+                              className={`mt-2 w-full h-8 font-mono text-xs font-bold justify-center ${
+                                isCurrent
+                                  ? 'bg-signal text-signal-foreground hover:bg-signal/90 shadow-sm'
+                                  : 'border border-border bg-panel text-foreground hover:bg-panel-deep'
+                              }`}
+                            >
+                              <Box className="size-3.5 mr-1.5" />
+                              {isCurrent ? 'Active in 3D Twin' : `Select & Inspect in 3D`}
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Desktop View: Full 8-Column Table (Hidden on screens < sm) */}
+                    <div className="hidden sm:block overflow-x-auto p-2">
                       <table className="w-full text-left font-mono text-[10px]">
                         <thead>
                           <tr className="border-b border-border text-[9px] uppercase text-muted-foreground">
@@ -1277,6 +1769,7 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                                     type="button"
                                     onClick={() => {
                                       setRole(mf.role);
+                                      setSelectedFoundationType(mf.recommendedTypeKey);
                                       setMobileTab('viewport');
                                     }}
                                     className={`rounded px-1.5 py-0.5 font-mono text-[9px] font-bold transition-all ${
@@ -1330,7 +1823,7 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
 
           {/* Right Column: 3D Viewport and Dynamic Foundation Matrix */}
           <main
-            className={`flex min-w-0 flex-1 flex-col overflow-y-auto bg-background ${
+            className={`flex min-w-0 flex-1 flex-col overflow-y-auto bg-background pb-24 lg:pb-0 ${
               mobileTab === 'wizard' ? 'hidden lg:flex' : 'flex'
             }`}
           >
@@ -1452,6 +1945,103 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                       wireframe={wireframe}
                       selectedFoundationType={selectedFoundationType}
                     />
+
+                    {/* Floating Mobile 3D Quick-Control Toolbar (lg:hidden) */}
+                    <div className="absolute top-2 left-2 right-2 z-10 flex flex-col gap-1.5 rounded-lg border border-border/80 bg-panel-deep/90 p-2 shadow-lg backdrop-blur-md lg:hidden pointer-events-auto">
+                      {/* Row 1: Fast Mast Role Selector */}
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="font-mono text-[9px] uppercase font-bold text-muted-foreground shrink-0">Mast:</span>
+                        <div className="flex flex-1 items-center justify-end gap-1 overflow-x-auto no-scrollbar">
+                          {(['N/NACC', 'ACC', 'ACA', 'OLC', 'OLA/BWA'] as const).map((r) => {
+                            const isCurrentRole = role === r || (r === 'OLC' && role === 'OLI');
+                            return (
+                              <button
+                                key={r}
+                                type="button"
+                                onClick={() => setRole(r)}
+                                className={`rounded px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase transition-all shrink-0 ${
+                                  isCurrentRole
+                                    ? 'bg-signal text-signal-foreground shadow-sm ring-1 ring-signal'
+                                    : 'border border-border bg-panel text-muted-foreground hover:text-foreground'
+                                }`}
+                              >
+                                {r === 'OLC' ? 'OLC/OLI' : r}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Row 2: Foundation Type Selector (PDF 2 Volume Chart / Images 3, 4, 5) */}
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="font-mono text-[9px] uppercase font-bold text-muted-foreground shrink-0">Fdn:</span>
+                        <div className="flex flex-1 items-center justify-end gap-1 overflow-x-auto no-scrollbar">
+                          {(
+                            [
+                              ['bType', 'B (Img 3)'],
+                              ['hbType', 'HB'],
+                              ['bgType', 'BG (Img 4)'],
+                              ['ngType', 'NG (Img 5)'],
+                              ['nbcType', 'NBC'],
+                              ['wbcType', 'WBC'],
+                            ] as const
+                          ).map(([k, label]) => {
+                            const isSelectedFdn = selectedFoundationType === k;
+                            const isRecommended = result.recommendedFoundation.typeKey === k;
+                            return (
+                              <button
+                                key={k}
+                                type="button"
+                                onClick={() => setSelectedFoundationType(k)}
+                                className={`flex items-center gap-0.5 rounded px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase transition-all shrink-0 ${
+                                  isSelectedFdn
+                                    ? 'bg-primary text-primary-foreground shadow-sm ring-1 ring-primary'
+                                    : 'border border-border bg-panel text-muted-foreground hover:text-foreground'
+                                }`}
+                              >
+                                <span>{label}</span>
+                                {isRecommended && <span className="text-amber-400 font-black">★</span>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Row 3: Quick View Presets & Switch to Matrix Tab */}
+                      <div className="flex items-center justify-between gap-1 pt-0.5 border-t border-border/50">
+                        <div className="flex items-center gap-1">
+                          {(['iso', 'front', 'side', 'top'] as const).map((v) => (
+                            <button
+                              key={v}
+                              type="button"
+                              onClick={() => setSceneView(v)}
+                              className={`rounded px-1.5 py-0.5 text-[8.5px] font-mono font-medium uppercase transition-colors ${
+                                sceneView === v ? 'bg-primary text-primary-foreground font-bold' : 'bg-panel text-muted-foreground border border-border'
+                              }`}
+                            >
+                              {v}
+                            </button>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => setWireframe(!wireframe)}
+                            className={`rounded px-1.5 py-0.5 text-[8.5px] font-mono transition-colors ${
+                              wireframe ? 'bg-signal text-signal-foreground font-bold' : 'bg-panel text-muted-foreground border border-border'
+                            }`}
+                          >
+                            Wire
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setMobileTab('matrix')}
+                          className="flex items-center gap-1 rounded bg-signal/20 px-2 py-0.5 font-mono text-[9px] font-bold text-signal border border-signal/40 hover:bg-signal/30"
+                        >
+                          <span>Matrix</span>
+                          <ArrowRight className="size-2.5" />
+                        </button>
+                      </div>
+                    </div>
 
                     {/* Overlay HUD Readouts (Mobile Compact) */}
                     <div className="pointer-events-none absolute bottom-3 left-3 right-3 flex flex-wrap gap-1.5 sm:bottom-4 sm:left-4 sm:right-auto sm:gap-2">
@@ -1752,7 +2342,86 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                       </Badge>
                     </div>
 
-                    <div className="overflow-x-auto p-3">
+                    {/* Mobile Responsive Cards for All 6 Mast Roles (sm:hidden) */}
+                    <div className="space-y-2.5 p-3 sm:hidden font-sans">
+                      {result.allMastFunctions.map((mf) => {
+                        const isCurrent = role === mf.role;
+                        return (
+                          <div
+                            key={mf.role}
+                            className={`rounded-lg border p-3 space-y-2 transition-all ${
+                              isCurrent
+                                ? 'border-signal bg-signal/10 ring-1 ring-signal'
+                                : 'border-border bg-panel-deep/50'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="flex items-center gap-1.5 font-bold text-xs">
+                                  {isCurrent && <span className="size-2 rounded-full bg-signal inline-block" />}
+                                  <span className={isCurrent ? 'text-signal font-black' : 'text-foreground'}>
+                                    {mf.roleLabel}
+                                  </span>
+                                </div>
+                                <div className="text-[9px] text-muted-foreground">{mf.roleTitle}</div>
+                              </div>
+                              <Badge variant="outline" className="border-primary/40 bg-primary/10 font-mono text-[10px] text-primary font-bold">
+                                {mf.mastSection}
+                              </Badge>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-1 rounded bg-panel p-2 font-mono text-[9px] border border-border/80 text-center">
+                              <div>
+                                <span className="text-muted-foreground block text-[8px] uppercase">FBM Code</span>
+                                <strong className="text-primary text-[11px] font-black">{mf.fbmCode}</strong>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground block text-[8px] uppercase">Axial / BM</span>
+                                <strong className="text-foreground">{mf.fbmVerticalLoad}kg / {mf.fbmMoment}</strong>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground block text-[8px] uppercase">Deflection</span>
+                                <strong className="text-signal">{mf.reverseDeflection > 0 ? `+${mf.reverseDeflection}mm` : `${mf.reverseDeflection}mm`}</strong>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-1 font-mono text-[9px]">
+                              <div className={`rounded p-1.5 text-center border ${result.recommendedFoundation.typeKey === 'bType' ? 'border-signal bg-signal/20 text-signal font-bold' : 'border-border bg-panel text-muted-foreground'}`}>
+                                <span className="block text-[8px] text-muted-foreground">B-Type (11k)</span>
+                                <span className="font-bold text-foreground">{mf.bFdn}</span>
+                              </div>
+                              <div className={`rounded p-1.5 text-center border ${result.recommendedFoundation.typeKey === 'bgType' ? 'border-signal bg-signal/20 text-signal font-bold' : 'border-border bg-panel text-muted-foreground'}`}>
+                                <span className="block text-[8px] text-muted-foreground">BG-Type (11k)</span>
+                                <span className="font-bold text-foreground">{mf.bgFdn}</span>
+                              </div>
+                              <div className={`rounded p-1.5 text-center border ${result.recommendedFoundation.typeKey === 'ngType' ? 'border-signal bg-signal/20 text-signal font-bold' : 'border-border bg-panel text-muted-foreground'}`}>
+                                <span className="block text-[8px] text-muted-foreground">NG-Type (11k)</span>
+                                <span className="font-bold text-foreground">{mf.ngFdn}</span>
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setRole(mf.role);
+                                setSelectedFoundationType(mf.recommendedTypeKey);
+                                setMobileTab('viewport');
+                              }}
+                              className={`w-full py-1.5 rounded font-mono text-[10px] font-bold transition-all ${
+                                isCurrent
+                                  ? 'bg-signal text-signal-foreground shadow-sm'
+                                  : 'border border-border bg-panel text-muted-foreground hover:text-foreground'
+                              }`}
+                            >
+                              {isCurrent ? '✓ Active in 3D Digital Twin' : 'Switch & View in 3D'}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Desktop & Tablet Full Table (hidden sm:block) */}
+                    <div className="hidden sm:block overflow-x-auto p-3">
                       <table className="w-full text-left font-mono text-[10.5px]">
                         <thead>
                           <tr className="border-b border-border text-[9.5px] uppercase text-muted-foreground">
@@ -1852,7 +2521,56 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                       </Badge>
                     </div>
 
-                    <div className="overflow-x-auto p-3">
+                    {/* Mobile Highlight Card for KEC Sheet No. 01 (sm:hidden) */}
+                    <div className="p-3 sm:hidden space-y-2.5 font-sans">
+                      <div className="rounded-lg border border-border bg-panel-deep p-3 space-y-2.5 font-mono text-xs">
+                        <div className="flex items-center justify-between border-b border-border/80 pb-2">
+                          <span className="text-[10px] text-muted-foreground uppercase font-bold">Active RDSO FDN Code:</span>
+                          <Badge variant="outline" className="border-primary/50 bg-primary/10 text-primary font-black text-xs">
+                            Code {result.fbmCode}
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-[10px]">
+                          <div>
+                            <span className="text-muted-foreground block text-[9px] uppercase">Direct Load:</span>
+                            <strong className="text-foreground text-xs">{result.activeKecRow.load} kg</strong>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground block text-[9px] uppercase">Bending Moment:</span>
+                            <strong className="text-foreground text-xs">{result.activeKecRow.moment} kg·m</strong>
+                          </div>
+                        </div>
+                        <div className="rounded bg-panel p-2.5 border border-signal/40 space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[9px] uppercase font-bold text-signal">Recommended Foundation:</span>
+                            <Badge className="bg-signal text-signal-foreground text-[10px] font-bold">
+                              {result.recommendedFoundation.reference}
+                            </Badge>
+                          </div>
+                          <p className="text-[9.5px] text-muted-foreground font-sans leading-tight">
+                            {stepLevel <= 0.70
+                              ? `Normal Flat Cess (C = ${result.superBlock.stepC.toFixed(2)}m ≤ 0.70m): Side Bearing ${result.activeKecRow.b} (11,000 kgf/m²).`
+                              : stepLevel <= 1.00
+                              ? `High Cess Drop (0.70m < C = ${result.superBlock.stepC.toFixed(2)}m ≤ 1.00m): Side Gravity ${result.activeKecRow.bg11k} (11,000 kgf/m²).`
+                              : `Excess Cess Drop (C = ${result.superBlock.stepC.toFixed(2)}m > 1.00m): Pure Gravity ${result.activeKecRow.mg11k} (11,000 kgf/m²).`}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Expandable toggle for full 8-column table on mobile */}
+                      <div className="text-center pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setShowFullSoilMatrixMobile(!showFullSoilMatrixMobile)}
+                          className="inline-flex items-center gap-1 text-[10px] font-mono text-primary hover:underline font-bold"
+                        >
+                          <span>{showFullSoilMatrixMobile ? 'Hide' : 'Inspect'} Full 8-Column KEC Sheet Table</span>
+                          <ChevronDown className={`size-3 transition-transform ${showFullSoilMatrixMobile ? 'rotate-180' : ''}`} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className={`${showFullSoilMatrixMobile ? 'block' : 'hidden'} sm:block overflow-x-auto p-3`}>
                       <table className="w-full text-center font-mono text-[10.5px]">
                         <thead>
                           <tr className="border-b border-border text-[9.5px] uppercase text-muted-foreground">
@@ -2281,6 +2999,76 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
             </section>
           </main>
         </div>
+
+        {/* Universal Persistent Bottom Navigation Bar for Mobile (< lg) */}
+        <nav className="no-print fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t border-border bg-panel-deep/95 px-2 py-1.5 backdrop-blur-md shadow-2xl lg:hidden safe-area-bottom">
+          <button
+            type="button"
+            onClick={() => setMobileTab('wizard')}
+            className={`flex flex-1 flex-col items-center gap-0.5 rounded-lg py-1 transition-colors ${
+              mobileTab === 'wizard' ? 'text-signal font-bold' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <div className="relative">
+              <SlidersHorizontal className="size-5" />
+              <span className="absolute -top-1 -right-2 flex size-3.5 items-center justify-center rounded-full bg-signal text-[8px] font-bold text-signal-foreground">
+                {[step1Done, step2Done, step3Done, step4Done].filter(Boolean).length}
+              </span>
+            </div>
+            <span className="text-[10px] uppercase font-bold tracking-tight">Wizard</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMobileTab('viewport')}
+            className={`flex flex-1 flex-col items-center gap-0.5 rounded-lg py-1 transition-colors ${
+              mobileTab === 'viewport' ? 'text-signal font-bold' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <div className="relative">
+              <Box className="size-5" />
+              {allStepsComplete && (
+                <span className="absolute -top-1 -right-2 flex size-3.5 items-center justify-center rounded-full bg-primary text-[8px] font-bold text-primary-foreground">
+                  3D
+                </span>
+              )}
+            </div>
+            <span className="text-[10px] uppercase font-bold tracking-tight">3D Twin</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMobileTab('matrix')}
+            className={`flex flex-1 flex-col items-center gap-0.5 rounded-lg py-1 transition-colors ${
+              mobileTab === 'matrix' ? 'text-signal font-bold' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <div className="relative">
+              <FileSpreadsheet className="size-5" />
+              <span className="absolute -top-1 -right-2 flex size-3.5 items-center justify-center rounded-full bg-primary text-[8px] font-bold text-primary-foreground">
+                M
+              </span>
+            </div>
+            <span className="text-[10px] uppercase font-bold tracking-tight">Matrix</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowQuickGuide(true)}
+            className="flex flex-1 flex-col items-center gap-0.5 rounded-lg py-1 text-primary hover:text-primary transition-colors"
+          >
+            <BookOpen className="size-5 text-primary" />
+            <span className="text-[10px] uppercase font-bold tracking-tight text-primary">Field Guide</span>
+          </button>
+        </nav>
+
+        {/* Quick Guide Interactive Walkthrough Modal */}
+        <QuickGuideModal
+          open={showQuickGuide}
+          onClose={() => setShowQuickGuide(false)}
+          onLoadPreset={(p) => loadPreset(p)}
+          onSwitchTab={(t) => setMobileTab(t)}
+        />
 
         {/* Print Layout Sheet */}
         <div className="print-sheet hidden p-8 font-mono text-xs">
