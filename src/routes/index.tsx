@@ -128,6 +128,7 @@ function ConfiguratorPage() {
     implantationMode,
     implantation,
     stepLevel,
+    shoulderWidth,
     alignment,
     radius,
     span,
@@ -140,6 +141,7 @@ function ConfiguratorPage() {
     setImplantationMode,
     setImplantation,
     setStepLevel,
+    setShoulderWidth,
     setAlignment,
     setRadius,
     setSpan,
@@ -170,13 +172,14 @@ function ConfiguratorPage() {
         implantationMode,
         implantation,
         stepLevel,
+        shoulderWidth,
         alignment,
         radius,
         span,
         role,
         mastPreference,
       }),
-    [wind, implantationMode, implantation, stepLevel, alignment, radius, span, role, mastPreference]
+    [wind, implantationMode, implantation, stepLevel, shoulderWidth, alignment, radius, span, role, mastPreference]
   );
 
   const copyTechnicalSummary = async () => {
@@ -186,6 +189,7 @@ function ConfiguratorPage() {
 - Wind Pressure: ${wind ?? 'N/A'} kgf/m²
 - Implantation (Setting Distance): ${(implantation ?? 3.0).toFixed(2)} m (${result.tierDescription})
 - Cess Step Level Difference (C): ${result.superBlock.stepC.toFixed(2)} m (${result.superBlock.status})
+- Cess Shoulder Width (e): ${(shoulderWidth ?? 0.60).toFixed(2)} m
 ${result.superBlock.required ? `- Super Block Height (H_sb): ${result.superBlock.height.toFixed(2)} m (ACTM Vol-II requirement)` : '- Super Block: Not Required (C ≤ 0.50 m standard step)'}
 - Track Alignment: ${alignment ?? 'N/A'} ${alignment !== 'tangent' ? `(Radius: ${radius} m, Span: ${span} m, Versine: ${result.versine} mm)` : ''}
 - Mast Function: ${role ?? 'N/A'}
@@ -717,30 +721,30 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                       <div className="flex flex-wrap items-center gap-1.5 pt-1 font-mono text-[9px]">
                         <span
                           className={`rounded px-1.5 py-0.5 border transition-all ${
-                            stepLevel <= 0.70
+                            result.recommendedFoundation.typeKey === 'bType'
                               ? 'border-signal bg-signal/20 text-signal font-bold shadow-sm'
                               : 'border-border bg-panel-deep text-muted-foreground'
                           }`}
                         >
-                          C ≤ 0.70m: B-Type (Normal Ground)
+                          C ≤ 0.70m & e ≥ 0.50m: B-Type (Normal Ground)
                         </span>
                         <span
                           className={`rounded px-1.5 py-0.5 border transition-all ${
-                            stepLevel > 0.70 && stepLevel <= 1.00
+                            result.recommendedFoundation.typeKey === 'bgType'
                               ? 'border-signal bg-signal/20 text-signal font-bold shadow-sm'
                               : 'border-border bg-panel-deep text-muted-foreground'
                           }`}
                         >
-                          0.70m &lt; C ≤ 1.00m: BG-Type (High Cess / Slope)
+                          0.70m &lt; C ≤ 1.00m or e &lt; 0.50m: BG-Type (Slope)
                         </span>
                         <span
                           className={`rounded px-1.5 py-0.5 border transition-all ${
-                            stepLevel > 1.00
+                            result.recommendedFoundation.typeKey === 'ngType'
                               ? 'border-signal bg-signal/20 text-signal font-bold shadow-sm'
                               : 'border-border bg-panel-deep text-muted-foreground'
                           }`}
                         >
-                          C &gt; 1.00m: NG-Type (Pure Gravity)
+                          C &gt; 1.00m or e &lt; 0.20m: NG-Type (Pure Gravity)
                         </span>
                       </div>
                     </div>
@@ -838,6 +842,7 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                     )}
 
                     {/* Clause 3.5.14 Violation Alert */}
+                    {/* Clause 3.5.14 Violation Alert */}
                     {result.superBlock.clause3514Violation && (
                       <div className="flex items-start gap-2 rounded border border-destructive bg-destructive/20 p-2.5 text-[11px] text-destructive">
                         <AlertOctagon className="mt-0.5 size-4 shrink-0" />
@@ -847,6 +852,86 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                         </span>
                       </div>
                     )}
+                  </div>
+
+                  {/* 3. Cess Shoulder Width (e) */}
+                  <div className="rounded border border-border/80 bg-panel p-3.5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <label className="text-[11px] font-bold uppercase text-foreground">
+                          3. Cess Shoulder Width (e)
+                        </label>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="size-3 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs text-xs">
+                            Distance from back of foundation to slope crest per RDSO Drawing TI/CIV/FND/RDSO/00001/12/0.
+                            Standard e ≥ 0.50m provides full side-bearing (B-Type). If 0.20m ≤ e &lt; 0.50m, side-gravity (BG-Type) is mandatory. If e &lt; 0.20m (at slope edge), pure gravity (NG-Type) is mandatory.
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min={0.05}
+                          max={1.20}
+                          step={0.05}
+                          value={shoulderWidth ?? 0.60}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value);
+                            if (!isNaN(val)) setShoulderWidth(val);
+                          }}
+                          className="h-8 w-20 border-border bg-panel-deep text-right font-mono text-xs"
+                        />
+                        <span className="font-mono text-xs text-muted-foreground">m</span>
+                      </div>
+                    </div>
+
+                    <Slider
+                      min={0.05}
+                      max={1.20}
+                      step={0.05}
+                      value={[shoulderWidth ?? 0.60]}
+                      onValueChange={(vals) => setShoulderWidth(vals[0] ?? 0.60)}
+                      className="py-1"
+                    />
+
+                    {/* Quick Shoulder Presets */}
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {[
+                        { val: 0.15, label: '0.15m (Slope Edge ➔ NG-Type)' },
+                        { val: 0.35, label: '0.35m (Restricted ➔ BG-Type)' },
+                        { val: 0.60, label: '0.60m (Standard ➔ B-Type)' },
+                        { val: 1.00, label: '1.00m (Wide Formation)' },
+                      ].map((preset) => (
+                        <button
+                          key={preset.val}
+                          type="button"
+                          onClick={() => setShoulderWidth(preset.val)}
+                          className={`rounded border px-2 py-0.5 font-mono text-[9px] transition-colors ${
+                            (shoulderWidth ?? 0.60) === preset.val
+                              ? 'border-signal bg-signal/20 font-bold text-signal'
+                              : 'border-border bg-panel-deep text-muted-foreground hover:text-foreground'
+                          }`}
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center justify-between rounded bg-panel-deep px-3 py-1.5 border border-border font-mono text-[10px]">
+                      <span className="text-muted-foreground">RDSO Slope Standard:</span>
+                      <span className="text-foreground">
+                        {(shoulderWidth ?? 0.60) < 0.20 ? (
+                          <strong className="text-signal">e &lt; 0.20m (Slope Edge ➔ NG-Type Pure Gravity)</strong>
+                        ) : (shoulderWidth ?? 0.60) < 0.50 ? (
+                          <strong className="text-signal">0.20m ≤ e &lt; 0.50m (Restricted Bank ➔ BG-Type Side Gravity)</strong>
+                        ) : (
+                          <strong className="text-success">e ≥ 0.50m (Adequate Shoulder ➔ B-Type Side Bearing)</strong>
+                        )}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </section>
@@ -1123,6 +1208,91 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                       <span>
                         Embedment: <strong className="text-foreground font-mono">{result.mastLengthEmbedded}m</strong>
                       </span>
+                    </div>
+                  </div>
+
+                  {/* All-Mast Function Resolution & Comparison Table (All 6 Roles Side-by-Side) */}
+                  <div className="mt-3 rounded border border-border/80 bg-panel overflow-hidden space-y-0 shadow-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-1.5 border-b border-border bg-panel-deep px-3 py-2">
+                      <div className="flex items-center gap-1.5 font-bold text-xs text-foreground">
+                        <Layers className="size-3.5 text-primary" />
+                        <span>All 6 Mast Roles Resolution Matrix</span>
+                      </div>
+                      <Badge variant="outline" className="border-signal/40 bg-signal/10 font-mono text-[9px] text-signal">
+                        Wind {wind}kg | Imp {(implantation ?? 3.5).toFixed(2)}m
+                      </Badge>
+                    </div>
+
+                    <div className="overflow-x-auto p-2">
+                      <table className="w-full text-left font-mono text-[10px]">
+                        <thead>
+                          <tr className="border-b border-border text-[9px] uppercase text-muted-foreground">
+                            <th className="pb-1.5">Role</th>
+                            <th className="pb-1.5">Mast Type</th>
+                            <th className="pb-1.5 text-center">FBM</th>
+                            <th className="pb-1.5 text-center">Defl.</th>
+                            <th className="pb-1.5 text-center">B-Type</th>
+                            <th className="pb-1.5 text-center">BG-Type</th>
+                            <th className="pb-1.5 text-center">NG-Type</th>
+                            <th className="pb-1.5 text-right">3D Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border/40">
+                          {result.allMastFunctions.map((mf) => {
+                            const isCurrent = role === mf.role;
+                            return (
+                              <tr
+                                key={mf.role}
+                                className={`transition-colors ${
+                                  isCurrent ? 'bg-signal/15 font-bold text-foreground' : 'hover:bg-panel-deep/60 text-muted-foreground'
+                                }`}
+                              >
+                                <td className="py-2 pr-1">
+                                  <div className="flex items-center gap-1">
+                                    {isCurrent && <span className="size-1.5 rounded-full bg-signal inline-block" />}
+                                    <span className={isCurrent ? 'text-signal font-bold' : 'text-foreground'}>
+                                      {mf.roleLabel}
+                                    </span>
+                                  </div>
+                                  <div className="text-[8.5px] text-muted-foreground line-clamp-1">{mf.roleTitle}</div>
+                                </td>
+                                <td className="py-2 pr-1">
+                                  <span className="font-semibold text-foreground">{mf.mastSection.split(' (')[0]}</span>
+                                </td>
+                                <td className="py-2 text-center font-bold text-primary">{mf.fbmCode}</td>
+                                <td className="py-2 text-center text-[9px] whitespace-nowrap">
+                                  {mf.reverseDeflection > 0 ? `+${mf.reverseDeflection}mm` : `${mf.reverseDeflection}mm`}
+                                </td>
+                                <td className={`py-2 text-center px-1 ${result.recommendedFoundation.typeKey === 'bType' ? 'text-signal font-black' : ''}`}>
+                                  {mf.bFdn}
+                                </td>
+                                <td className={`py-2 text-center px-1 ${result.recommendedFoundation.typeKey === 'bgType' ? 'text-signal font-black' : ''}`}>
+                                  {mf.bgFdn}
+                                </td>
+                                <td className={`py-2 text-center px-1 ${result.recommendedFoundation.typeKey === 'ngType' ? 'text-signal font-black' : ''}`}>
+                                  {mf.ngFdn}
+                                </td>
+                                <td className="py-2 text-right">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setRole(mf.role);
+                                      setMobileTab('viewport');
+                                    }}
+                                    className={`rounded px-1.5 py-0.5 font-mono text-[9px] font-bold transition-all ${
+                                      isCurrent
+                                        ? 'bg-signal text-signal-foreground shadow-sm'
+                                        : 'border border-border bg-panel-deep text-muted-foreground hover:text-foreground'
+                                    }`}
+                                  >
+                                    {isCurrent ? 'In 3D' : 'View'}
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 </div>
@@ -1565,6 +1735,104 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                         <span className="text-muted-foreground">Reverse Deflection: </span>
                         <strong className="text-signal font-bold">{result.deflectionDirection}</strong>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* All 6 Mast Roles Resolution Matrix Table (Full Comparative Schedule) */}
+                  <div className="rounded-lg border border-border bg-panel overflow-hidden shadow-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-panel-deep px-3.5 py-2.5">
+                      <div className="flex items-center gap-2">
+                        <Layers className="size-4 text-primary" />
+                        <span className="font-bold text-xs text-foreground">
+                          All 6 Mast Roles Simultaneous Resolution & Foundation Codes (PDF 1 & KEC Sheet 01)
+                        </span>
+                      </div>
+                      <Badge variant="outline" className="font-mono text-[9px] border-signal/40 bg-signal/10 text-signal">
+                        Wind {wind} kgf/m² · Cess C = {result.superBlock.stepC.toFixed(2)}m · Shoulder e = {(shoulderWidth ?? 0.60).toFixed(2)}m
+                      </Badge>
+                    </div>
+
+                    <div className="overflow-x-auto p-3">
+                      <table className="w-full text-left font-mono text-[10.5px]">
+                        <thead>
+                          <tr className="border-b border-border text-[9.5px] uppercase text-muted-foreground">
+                            <th className="pb-2">Mast Role</th>
+                            <th className="pb-2">Mast Section</th>
+                            <th className="pb-2 text-center">FBM</th>
+                            <th className="pb-2 text-center">Axial / BM</th>
+                            <th className="pb-2 text-center">Deflection</th>
+                            <th className={`pb-2 text-center px-1.5 ${result.recommendedFoundation.typeKey === 'bType' ? 'text-signal font-bold' : ''}`}>
+                              B-Type (11k) {result.recommendedFoundation.typeKey === 'bType' && '★'}
+                            </th>
+                            <th className={`pb-2 text-center px-1.5 ${result.recommendedFoundation.typeKey === 'bgType' ? 'text-signal font-bold' : ''}`}>
+                              BG-Type (11k) {result.recommendedFoundation.typeKey === 'bgType' && '★'}
+                            </th>
+                            <th className={`pb-2 text-center px-1.5 ${result.recommendedFoundation.typeKey === 'ngType' ? 'text-signal font-bold' : ''}`}>
+                              NG-Type (11k) {result.recommendedFoundation.typeKey === 'ngType' && '★'}
+                            </th>
+                            <th className="pb-2 text-right">3D Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border/40">
+                          {result.allMastFunctions.map((mf) => {
+                            const isCurrent = role === mf.role;
+                            return (
+                              <tr
+                                key={mf.role}
+                                className={`transition-colors ${
+                                  isCurrent ? 'bg-signal/15 font-bold text-foreground' : 'hover:bg-panel-deep/50 text-muted-foreground'
+                                }`}
+                              >
+                                <td className="py-2.5 pr-2">
+                                  <div className="flex items-center gap-1.5">
+                                    {isCurrent && <span className="size-2 rounded-full bg-signal inline-block" />}
+                                    <span className={isCurrent ? 'text-signal font-black' : 'text-foreground'}>
+                                      {mf.roleLabel}
+                                    </span>
+                                  </div>
+                                  <div className="text-[9px] text-muted-foreground">{mf.roleTitle}</div>
+                                </td>
+                                <td className="py-2.5 pr-2 font-semibold text-foreground">
+                                  {mf.mastSection}
+                                </td>
+                                <td className="py-2.5 text-center font-bold text-primary text-xs">{mf.fbmCode}</td>
+                                <td className="py-2.5 text-center text-[9.5px]">
+                                  {mf.fbmVerticalLoad}kg / {mf.fbmMoment}kg·m
+                                </td>
+                                <td className="py-2.5 text-center text-[9.5px] whitespace-nowrap">
+                                  {mf.reverseDeflection > 0 ? `+${mf.reverseDeflection} mm` : `${mf.reverseDeflection} mm`}
+                                </td>
+                                <td className={`py-2.5 text-center px-2 ${result.recommendedFoundation.typeKey === 'bType' ? 'bg-signal/20 text-signal font-black ring-1 ring-signal' : 'text-foreground'}`}>
+                                  {mf.bFdn}
+                                </td>
+                                <td className={`py-2.5 text-center px-2 ${result.recommendedFoundation.typeKey === 'bgType' ? 'bg-signal/20 text-signal font-black ring-1 ring-signal' : 'text-foreground'}`}>
+                                  {mf.bgFdn}
+                                </td>
+                                <td className={`py-2.5 text-center px-2 ${result.recommendedFoundation.typeKey === 'ngType' ? 'bg-signal/20 text-signal font-black ring-1 ring-signal' : 'text-foreground'}`}>
+                                  {mf.ngFdn}
+                                </td>
+                                <td className="py-2.5 text-right">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setRole(mf.role);
+                                      setSelectedFoundationType(mf.recommendedTypeKey);
+                                      setMobileTab('viewport');
+                                    }}
+                                    className={`rounded px-2.5 py-1 font-mono text-[9.5px] font-bold transition-all ${
+                                      isCurrent
+                                        ? 'bg-signal text-signal-foreground shadow-sm'
+                                        : 'border border-border bg-panel-deep text-muted-foreground hover:text-foreground'
+                                    }`}
+                                  >
+                                    {isCurrent ? 'Active in 3D' : 'Switch & View'}
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
 

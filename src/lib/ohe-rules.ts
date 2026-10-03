@@ -8,6 +8,7 @@ export interface OheConfig {
   implantationMode: ImplantationMode;
   implantation: number | null; // 3.00 for standard, 3.00 - 5.00 for custom
   stepLevel: number; // 0.00 to 2.00 m (Cess Step Level Difference C from Rail Level to Foundation Top)
+  shoulderWidth?: number | undefined; // 0.05 to 1.20 m (Cess Shoulder Width e from back of foundation to bank slope crest)
   alignment: Alignment | null;
   radius: number; // 200 to 2500 m
   span: number; // 22.5 to 72 m
@@ -465,6 +466,25 @@ export interface SuperBlockInfo {
   clause3514Violation: boolean;
 }
 
+export interface MastFunctionResolution {
+  role: Role;
+  roleLabel: string;
+  roleTitle: string;
+  mastSection: string;
+  mastSeries: string;
+  mastType: 'rolled' | 'b-type';
+  fbmCode: number;
+  fbmVerticalLoad: number;
+  fbmMoment: number;
+  reverseDeflection: number;
+  deflectionDirection: string;
+  bFdn: string;
+  bgFdn: string;
+  ngFdn: string;
+  recommendedFdn: string;
+  recommendedTypeKey: FoundationTypeKey;
+}
+
 export interface CalculationResult {
   isComplete: boolean;
   versine: number;
@@ -489,6 +509,8 @@ export interface CalculationResult {
   maxPermissibleSpan: number;
   maxScheduleVersine: number;
   superBlock: SuperBlockInfo;
+  shoulderWidth: number; // 0.05 to 1.20 m
+  allMastFunctions: MastFunctionResolution[];
   foundations: {
     bType: FoundationEntry;
     hbType: FoundationEntry;
@@ -512,6 +534,7 @@ export interface FoundationRecommendation {
   typeName: string;
   reason: string;
   cessRange: string;
+  shoulderRange: string;
   soilPressure: string;
   ruleTitle: string;
   drawingRef: string;
@@ -519,114 +542,79 @@ export interface FoundationRecommendation {
 
 export function getRecommendedFoundation(
   stepC: number,
+  shoulderWidth: number,
   scheduleRow: KecScheduleRow,
   fbmCode: number
 ): FoundationRecommendation {
-  if (stepC <= 0.70) {
-    const ref = scheduleRow.b;
-    return {
-      typeKey: 'bType',
-      reference: ref,
-      typeName: `B-Type Side Bearing (${ref})`,
-      reason: `Cess Step Level C = ${stepC.toFixed(2)} m is within standard/low range (C ≤ 0.70 m). Firm cess formation provides full lateral side-bearing support per Image 3 (TI/CIV/FND/RDSO/00001/12/0 Sheet-1 Page 01).`,
-      cessRange: 'C ≤ 0.70 m: Low / Normal Cess',
-      soilPressure: '11,000 kgf/m²',
-      ruleTitle: 'Normal Soil Side Bearing (B-Type)',
-      drawingRef: 'Image 3 / Page 01 (DRG TI/CIV/FND/RDSO/00001/12/0 SHEET-1)',
-    };
-  } else if (stepC <= 1.00) {
-    const ref = scheduleRow.bg11k === 'SPL' ? scheduleRow.bg8k : scheduleRow.bg11k;
-    return {
-      typeKey: 'bgType',
-      reference: ref,
-      typeName: `BG-Type Side Gravity (${ref})`,
-      reason: `Cess Step Level C = ${stepC.toFixed(2)} m is in high cess range (0.70 m < C ≤ 1.00 m). Embankment shoulder slope requires the asymmetric 45° battered rear face to resist soil slip without earth retaining walls per Image 4 & Image 2 (Sheet No. 01 highlighted).`,
-      cessRange: '0.70 m < C ≤ 1.00 m: High Cess / Embankment Slope',
-      soilPressure: '11,000 kgf/m²',
-      ruleTitle: 'Side Gravity on Slopes (BG-Type)',
-      drawingRef: 'Image 4 / Page 03 (DRG TI/CIV/FND/RDSO/00001/12/0 SHEET-1)',
-    };
-  } else {
+  // If shoulder width is critical (< 0.20 m) or cess drop is severe (> 1.00 m):
+  // embankment slope provides zero passive lateral resistance -> pure gravity NG-Type is mandatory
+  if (shoulderWidth < 0.20 || stepC > 1.00) {
     const ref = scheduleRow.ng11k === 'SPL' ? scheduleRow.ng8k : scheduleRow.ng11k;
     return {
       typeKey: 'ngType',
       reference: ref,
       typeName: `NG-Type Pure Gravity (${ref})`,
-      reason: `Cess Step Level C = ${stepC.toFixed(2)} m exceeds 1.00 m (deep cess drop-off). Loss of lateral earth containment requires pure gravity stability via 3-stage stepped monolithic block per Image 5 (Sheet-2 Page 05).`,
-      cessRange: 'C > 1.00 m: Deep Cess / Loose Soil',
+      reason: shoulderWidth < 0.20
+        ? `Cess Shoulder Width e = ${shoulderWidth.toFixed(2)} m is at the slope crest (e < 0.20 m). Complete loss of lateral passive earth support mandates pure gravity monolithic stepped foundation per Image 5 (Sheet-2 Page 05).`
+        : `Cess Step Level C = ${stepC.toFixed(2)} m exceeds 1.00 m (deep cess drop-off). Loss of lateral earth containment requires pure gravity stability via 3-stage stepped monolithic block per Image 5 (Sheet-2 Page 05).`,
+      cessRange: stepC > 1.00 ? 'C > 1.00 m: Deep Cess Drop-off' : `C = ${stepC.toFixed(2)} m`,
+      shoulderRange: shoulderWidth < 0.20 ? 'e < 0.20 m: Critical Slope Edge' : `e = ${shoulderWidth.toFixed(2)} m`,
       soilPressure: '11,000 kgf/m²',
       ruleTitle: 'Pure Gravity Stepped Foundation (NG-Type)',
       drawingRef: 'Image 5 / Page 05 (DRG TI/CIV/FND/RDSO/00001/12/0 SHEET-2)',
     };
+  } else if (shoulderWidth < 0.50 || stepC > 0.70) {
+    // High cess (0.70m < C <= 1.00m) OR restricted shoulder bank (0.20m <= e < 0.50m)
+    // Asymmetric 45° battered rear face is mandatory per Image 4 & Image 2
+    const ref = scheduleRow.bg11k === 'SPL' ? scheduleRow.bg8k : scheduleRow.bg11k;
+    return {
+      typeKey: 'bgType',
+      reference: ref,
+      typeName: `BG-Type Side Gravity (${ref})`,
+      reason: shoulderWidth < 0.50
+        ? `Cess Shoulder Width e = ${shoulderWidth.toFixed(2)} m is restricted on embankment slope (e < 0.50 m). Requires asymmetric 45° battered rear face to mobilize gravitational resistance without soil slip per Image 4 & Image 2.`
+        : `Cess Step Level C = ${stepC.toFixed(2)} m is in high cess range (0.70 m < C ≤ 1.00 m). Embankment shoulder slope requires the asymmetric 45° battered rear face to resist soil slip without earth retaining walls per Image 4 & Image 2 (Sheet No. 01 highlighted).`,
+      cessRange: stepC > 0.70 ? '0.70 m < C ≤ 1.00 m: High Cess / Slope' : `C = ${stepC.toFixed(2)} m`,
+      shoulderRange: shoulderWidth < 0.50 ? '0.20 m ≤ e < 0.50 m: Restricted Shoulder' : `e = ${shoulderWidth.toFixed(2)} m`,
+      soilPressure: '11,000 kgf/m²',
+      ruleTitle: 'Side Gravity on Slopes (BG-Type)',
+      drawingRef: 'Image 4 / Page 03 (DRG TI/CIV/FND/RDSO/00001/12/0 SHEET-1)',
+    };
+  } else {
+    // Normal level ground (C <= 0.70m AND e >= 0.50m)
+    const ref = scheduleRow.b;
+    return {
+      typeKey: 'bType',
+      reference: ref,
+      typeName: `B-Type Side Bearing (${ref})`,
+      reason: `Cess Step Level C = ${stepC.toFixed(2)} m (C ≤ 0.70 m) and Shoulder Width e = ${shoulderWidth.toFixed(2)} m (e ≥ 0.50 m). Adequate cess width on firm level formation provides full passive lateral side-bearing support per Image 3 (TI/CIV/FND/RDSO/00001/12/0 Sheet-1 Page 01).`,
+      cessRange: 'C ≤ 0.70 m: Low / Normal Cess',
+      shoulderRange: 'e ≥ 0.50 m: Full Cess Shoulder Width',
+      soilPressure: '11,000 kgf/m²',
+      ruleTitle: 'Normal Soil Side Bearing (B-Type)',
+      drawingRef: 'Image 3 / Page 01 (DRG TI/CIV/FND/RDSO/00001/12/0 SHEET-1)',
+    };
   }
 }
 
-/**
- * Calculates RDSO & KEC employment schedule parameters, structural mechanics,
- * Cess Step Level Difference (C), Super Block volumes, and complete 6-soil Multi-Soil Foundation Matrix.
- * Enforces: ONLY B-TYPE MASTS (NO K-TYPE).
- */
-export function calculateOhe(config: OheConfig): CalculationResult {
-  const isComplete = Boolean(
-    config.wind !== null &&
-    config.implantation !== null &&
-    config.alignment !== null &&
-    config.role !== null
-  );
+export interface RoleParameters {
+  mastSection: string;
+  mastSeries: string;
+  mastType: 'rolled' | 'b-type';
+  reverseDeflection: number;
+  deflectionDirection: string;
+  fbmCode: number;
+}
 
-  const wind = config.wind ?? 105;
-  const implantation = config.implantation ?? 3.00;
-  // Cess Step Level Difference C: range 0.00 to 2.00, default 0.50
-  const stepC = Math.max(0.0, Math.min(2.0, config.stepLevel !== undefined ? config.stepLevel : 0.50));
-  const alignment = config.alignment ?? 'tangent';
-  const radius = config.radius || 1000;
-  const span = config.span || 49.5;
-  const role = config.role ?? 'N/NACC';
-
-  // 1. Employment Schedule Sheet Resolution (PDF 1 Sheets 1 to 18)
-  const sheetInfo = getEmploymentScheduleSheetInfo(wind, implantation, alignment);
-
-  // 2. Schedule Curve & Max Permissible Span Lookup
-  const curveSpecs = getCurveScheduleForWind(wind);
-  const matchedCurve =
-    alignment === 'tangent'
-      ? { radius: 0, maxSpan: getMaxTangentSpanForWind(wind), maxVersine: 0 }
-      : curveSpecs.find((c) => c.radius <= radius) ?? curveSpecs[curveSpecs.length - 1]!;
-  const maxPermissibleSpan = matchedCurve.maxSpan;
-  const maxScheduleVersine = matchedCurve.maxVersine;
-
-  // 3. Versine calculation: S² * 1000 / (8 * R) mm
-  const versine = alignment === 'tangent' ? 0 : Number(((span * span * 1000) / (8 * radius)).toFixed(1));
-
-  // 4. Minimum Setting Distance per RDSO rules (PDF 2 Page 37 & ACTM Vol-II)
-  const minSetting = getStandardImplantation(alignment, radius);
-  const settingValid = implantation >= minSetting;
-
-  // 5. Implantation Tier Classification (PDF 1 Sheets 1-18)
-  const implantationTier = sheetInfo.implantationTier;
-  const tierDescription = `${implantationTier}: ${sheetInfo.implantationDesc}`;
-  const requiresChair = implantationTier === 'Tier 3';
-
-  // 6. Cess Step Level Difference (C) & Super Block Engineering (ACTM Vol-II & RDSO Spec)
-  const isExcessStep = stepC > 0.50;
-  const superBlockHeight = isExcessStep ? Number((stepC - 0.50).toFixed(2)) : 0;
-  const mastBelowRL = Number((1.35 + stepC).toFixed(2));
-  const clause3514Violation = mastBelowRL > 1.850 && !isExcessStep;
-
-  const superBlock: SuperBlockInfo = {
-    required: isExcessStep,
-    stepC,
-    height: superBlockHeight,
-    status: isExcessStep ? 'EXCESS STEP LEVEL DETECTED' : 'STANDARD STEP DISTANCE',
-    description: isExcessStep
-      ? `Super Block required of size (Top of Foundation Dimensions) × ${superBlockHeight.toFixed(2)} m height to bring top of casting to within 500 mm of Rail Level (per ACTM Vol-II & RDSO Spec).`
-      : 'Standard step level distance (C ≤ 0.50 m). Foundation top is within 500 mm of Rail Level; no super block required.',
-    mastBelowRL,
-    clause3514Violation,
-  };
-
-  // 7. Reactive Structural Cascade: Mast Section, Reverse Deflection, and FBM Code (PDF 1)
-  // USER REQUIREMENT: STRICTLY B-TYPE ONLY (NO K-TYPE MASTS)
+export function resolveRoleParameters(
+  role: Role,
+  wind: number,
+  implantationTier: 'Tier 1' | 'Tier 2' | 'Tier 3',
+  implantation: number,
+  alignment: Alignment,
+  radius: number,
+  mastPreference?: 'auto' | 'B-150' | 'B-175' | 'B-200' | 'B-225' | 'B-250' | undefined
+): RoleParameters {
   let mastSection = '8"×6" RSJ / 6"×6" BFB Rolled Beam (37.1 kg/m)';
   let mastSeries = 'Rolled Beam Section (8"×6" RSJ / 6"×6" BFB)';
   let mastType: 'rolled' | 'b-type' = 'rolled';
@@ -645,7 +633,6 @@ export function calculateOhe(config: OheConfig): CalculationResult {
     // WIND PRESSURE 178 kgf/m², IMPLANTATION 2.8M - 3.8M (IMAGE 1 / SHEET 14)
     // ------------------------------------------------------------------------
     if (alignment === 'tangent') {
-      // Tangent Track (Row 1 of Image 1, Max Span 58.5 m, Radius ∞, Versine 0 mm)
       reverseDeflection = 30;
       deflectionDirection = '+30 mm (Away from track)';
       mastType = 'b-type';
@@ -674,7 +661,6 @@ export function calculateOhe(config: OheConfig): CalculationResult {
         fbmCode = 395;
       }
     } else if (isOutside) {
-      // Outside Curve (Top Table in Image 1)
       reverseDeflection = 30;
       deflectionDirection = '+30 mm (Away from track)';
       mastType = 'b-type';
@@ -730,7 +716,6 @@ export function calculateOhe(config: OheConfig): CalculationResult {
           fbmCode = 275;
         }
       } else {
-        // OLC / OLI
         if (radius <= 850) {
           mastSection = 'B-225 Heavy Fabricated Battened Mast (225 mm)';
           mastSeries = 'B-Series Fabricated Battened Mast (B-225)';
@@ -742,7 +727,6 @@ export function calculateOhe(config: OheConfig): CalculationResult {
         }
       }
     } else {
-      // Inside Curve (Bottom Table in Image 1)
       reverseDeflection = -30;
       deflectionDirection = '-30 mm (Towards track)';
       mastType = 'b-type';
@@ -798,14 +782,12 @@ export function calculateOhe(config: OheConfig): CalculationResult {
         mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
         fbmCode = radius <= 400 ? 275 : 270;
       } else {
-        // OLC / OLI
         mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
         mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
         fbmCode = 185;
       }
     }
   } else if (isBwa) {
-    // Other Wind Zones: OLA / BWA Regulated Anchor Mast
     reverseDeflection = -30;
     deflectionDirection = '-30 mm (Towards track, guy-wire anchored)';
     mastType = 'b-type';
@@ -823,7 +805,6 @@ export function calculateOhe(config: OheConfig): CalculationResult {
       fbmCode = wind >= 105 ? 389 : 374;
     }
   } else if (isInside) {
-    // Other Wind Zones: Inside Curve
     reverseDeflection = -30;
     deflectionDirection = '-30 mm (Towards track)';
     if (role === 'N/NACC') {
@@ -856,14 +837,12 @@ export function calculateOhe(config: OheConfig): CalculationResult {
       mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
       fbmCode = wind >= 178 ? 185 : wind >= 136 ? 178 : 161;
     } else {
-      // OLI
       mastType = 'b-type';
       mastSection = 'B-175 Fabricated Battened Mast (175 mm)';
       mastSeries = 'B-Series Fabricated Battened Mast (B-175)';
       fbmCode = wind >= 178 ? 185 : 161;
     }
   } else if (isOutside) {
-    // Other Wind Zones: Outside Curve
     reverseDeflection = 30;
     deflectionDirection = '+30 mm (Away from track)';
 
@@ -895,14 +874,13 @@ export function calculateOhe(config: OheConfig): CalculationResult {
       mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
       fbmCode = wind >= 178 ? 185 : wind >= 136 ? 185 : 173;
     } else {
-      // OLI
       mastType = 'b-type';
       mastSection = 'B-175 Fabricated Battened Mast (175 mm)';
       mastSeries = 'B-Series Fabricated Battened Mast (B-175)';
       fbmCode = wind >= 178 ? 185 : 161;
     }
   } else {
-    // Other Wind Zones: Tangent Track
+    // Tangent Track
     reverseDeflection = 30;
     deflectionDirection = '+30 mm (Away from track)';
 
@@ -946,7 +924,6 @@ export function calculateOhe(config: OheConfig): CalculationResult {
       mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
       fbmCode = wind >= 178 ? 185 : wind >= 136 ? 173 : 154;
     } else {
-      // OLI
       mastType = 'b-type';
       mastSection = wind >= 178 ? 'B-200 Fabricated Battened Mast (200 mm)' : 'B-175 Fabricated Battened Mast (175 mm)';
       mastSeries = wind >= 178 ? 'B-Series Fabricated Battened Mast (B-200)' : 'B-Series Fabricated Battened Mast (B-175)';
@@ -955,9 +932,9 @@ export function calculateOhe(config: OheConfig): CalculationResult {
   }
 
   // User Mast Preference Override (if specified)
-  if (config.mastPreference && config.mastPreference !== 'auto') {
+  if (mastPreference && mastPreference !== 'auto') {
     mastType = 'b-type';
-    const pref = config.mastPreference;
+    const pref = mastPreference;
     const widthMap: Record<string, number> = {
       'B-150': 150,
       'B-175': 175,
@@ -978,6 +955,154 @@ export function calculateOhe(config: OheConfig): CalculationResult {
     else if (fbmCode === 154) fbmCode = 161;
     else if (fbmCode === 161) fbmCode = 168;
   }
+
+  return {
+    mastSection,
+    mastSeries,
+    mastType,
+    reverseDeflection,
+    deflectionDirection,
+    fbmCode,
+  };
+}
+
+export function getAllMastFunctionsResolution(
+  wind: number,
+  implantationTier: 'Tier 1' | 'Tier 2' | 'Tier 3',
+  implantation: number,
+  alignment: Alignment,
+  radius: number,
+  stepC: number,
+  shoulderWidth: number,
+  mastPreference?: 'auto' | 'B-150' | 'B-175' | 'B-200' | 'B-225' | 'B-250' | undefined
+): MastFunctionResolution[] {
+  return roles.map((r) => {
+    const params = resolveRoleParameters(
+      r.value,
+      wind,
+      implantationTier,
+      implantation,
+      alignment,
+      radius,
+      mastPreference
+    );
+    const scheduleRow: KecScheduleRow = KEC_FDN_SCHEDULE[params.fbmCode] ?? KEC_FDN_SCHEDULE[140]!;
+    const fbmHundred = Math.floor(params.fbmCode / 100);
+    const fbmVerticalLoad = fbmHundred === 1 ? 700 : fbmHundred === 2 ? 1600 : 3000;
+    const fbmMoment = (params.fbmCode % 100) * 100;
+    const rec = getRecommendedFoundation(stepC, shoulderWidth, scheduleRow, params.fbmCode);
+
+    return {
+      role: r.value,
+      roleLabel: r.label,
+      roleTitle: r.title,
+      mastSection: params.mastSection,
+      mastSeries: params.mastSeries,
+      mastType: params.mastType,
+      fbmCode: params.fbmCode,
+      fbmVerticalLoad,
+      fbmMoment,
+      reverseDeflection: params.reverseDeflection,
+      deflectionDirection: params.deflectionDirection,
+      bFdn: scheduleRow.b,
+      bgFdn: scheduleRow.bg11k === 'SPL' ? scheduleRow.bg8k : scheduleRow.bg11k,
+      ngFdn: scheduleRow.ng11k === 'SPL' ? scheduleRow.ng8k : scheduleRow.ng11k,
+      recommendedFdn: rec.reference,
+      recommendedTypeKey: rec.typeKey,
+    };
+  });
+}
+
+/**
+ * Calculates RDSO & KEC employment schedule parameters, structural mechanics,
+ * Cess Step Level Difference (C), Super Block volumes, and complete 6-soil Multi-Soil Foundation Matrix.
+ * Enforces: ONLY B-TYPE MASTS (NO K-TYPE).
+ */
+export function calculateOhe(config: OheConfig): CalculationResult {
+  const isComplete = Boolean(
+    config.wind !== null &&
+    config.implantation !== null &&
+    config.alignment !== null &&
+    config.role !== null
+  );
+
+  const wind = config.wind ?? 105;
+  const implantation = config.implantation ?? 3.00;
+  // Cess Step Level Difference C: range 0.00 to 2.00, default 0.50
+  const stepC = Math.max(0.0, Math.min(2.0, config.stepLevel !== undefined ? config.stepLevel : 0.50));
+  // Cess Shoulder Width e: range 0.05 to 1.20 m, default 0.60 m
+  const shoulderWidth = Math.max(0.05, Math.min(1.20, config.shoulderWidth !== undefined ? config.shoulderWidth : 0.60));
+  const alignment = config.alignment ?? 'tangent';
+  const radius = config.radius || 1000;
+  const span = config.span || 49.5;
+  const role = config.role ?? 'N/NACC';
+
+  // 1. Employment Schedule Sheet Resolution (PDF 1 Sheets 1 to 18)
+  const sheetInfo = getEmploymentScheduleSheetInfo(wind, implantation, alignment);
+
+  // 2. Schedule Curve & Max Permissible Span Lookup
+  const curveSpecs = getCurveScheduleForWind(wind);
+  const matchedCurve =
+    alignment === 'tangent'
+      ? { radius: 0, maxSpan: getMaxTangentSpanForWind(wind), maxVersine: 0 }
+      : curveSpecs.find((c) => c.radius <= radius) ?? curveSpecs[curveSpecs.length - 1]!;
+  const maxPermissibleSpan = matchedCurve.maxSpan;
+  const maxScheduleVersine = matchedCurve.maxVersine;
+
+  // 3. Versine calculation: S² * 1000 / (8 * R) mm
+  const versine = alignment === 'tangent' ? 0 : Number(((span * span * 1000) / (8 * radius)).toFixed(1));
+
+  // 4. Minimum Setting Distance per RDSO rules (PDF 2 Page 37 & ACTM Vol-II)
+  const minSetting = getStandardImplantation(alignment, radius);
+  const settingValid = implantation >= minSetting;
+
+  // 5. Implantation Tier Classification (PDF 1 Sheets 1-18)
+  const implantationTier = sheetInfo.implantationTier;
+  const tierDescription = `${implantationTier}: ${sheetInfo.implantationDesc}`;
+  const requiresChair = implantationTier === 'Tier 3';
+
+  // 6. Cess Step Level Difference (C) & Super Block Engineering (ACTM Vol-II & RDSO Spec)
+  const isExcessStep = stepC > 0.50;
+  const superBlockHeight = isExcessStep ? Number((stepC - 0.50).toFixed(2)) : 0;
+  const mastBelowRL = Number((1.35 + stepC).toFixed(2));
+  const clause3514Violation = mastBelowRL > 1.850 && !isExcessStep;
+
+  const superBlock: SuperBlockInfo = {
+    required: isExcessStep,
+    stepC,
+    height: superBlockHeight,
+    status: isExcessStep ? 'EXCESS STEP LEVEL DETECTED' : 'STANDARD STEP DISTANCE',
+    description: isExcessStep
+      ? `Super Block required of size (Top of Foundation Dimensions) × ${superBlockHeight.toFixed(2)} m height to bring top of casting to within 500 mm of Rail Level (per ACTM Vol-II & RDSO Spec).`
+      : 'Standard step level distance (C ≤ 0.50 m). Foundation top is within 500 mm of Rail Level; no super block required.',
+    mastBelowRL,
+    clause3514Violation,
+  };
+
+  // 7. Reactive Structural Cascade: Mast Section, Reverse Deflection, and FBM Code (PDF 1)
+  const roleParams = resolveRoleParameters(
+    role,
+    wind,
+    implantationTier,
+    implantation,
+    alignment,
+    radius,
+    config.mastPreference
+  );
+  const { mastSection, mastSeries, mastType, reverseDeflection, deflectionDirection, fbmCode } = roleParams;
+  const isBwa = role === 'OLA/BWA';
+
+  // Complete Multi-Mast Function Comparative Array (all 6 roles resolved side-by-side)
+  const allMastFunctions = getAllMastFunctionsResolution(
+    wind,
+    implantationTier,
+    implantation,
+    alignment,
+    radius,
+    stepC,
+    shoulderWidth,
+    config.mastPreference
+  );
 
   // 8. Three-Digit FBM Code Architecture (Sheet 01 & Sheet 02)
   const fbmHundred = Math.floor(fbmCode / 100);
@@ -1244,6 +1369,8 @@ export function calculateOhe(config: OheConfig): CalculationResult {
     maxPermissibleSpan,
     maxScheduleVersine,
     superBlock,
+    shoulderWidth,
+    allMastFunctions,
     foundations: {
       bType,
       hbType,
@@ -1253,7 +1380,7 @@ export function calculateOhe(config: OheConfig): CalculationResult {
       wbcType,
     },
     muffSpec,
-    recommendedFoundation: getRecommendedFoundation(stepC, scheduleRow, fbmCode),
+    recommendedFoundation: getRecommendedFoundation(stepC, shoulderWidth, scheduleRow, fbmCode),
     activeKecRow: scheduleRow,
   };
 }

@@ -19,6 +19,7 @@ export interface OheState extends OheConfig {
   setImplantationMode: (mode: ImplantationMode) => void;
   setImplantation: (val: number) => void;
   setStepLevel: (val: number) => void;
+  setShoulderWidth: (val: number) => void;
   setAlignment: (alignment: Alignment) => void;
   setRadius: (radius: number) => void;
   setSpan: (span: number) => void;
@@ -33,6 +34,7 @@ const initialDefaults: OheConfig = {
   implantationMode: 'custom',
   implantation: 3.50, // 3.50 m within 2.80 m to 3.80 m (Tier 2) per user requirement
   stepLevel: 0.90, // Cess Step Level 0.90 m (triggers BG-Type BG-9)
+  shoulderWidth: 0.40, // Cess Shoulder Width 0.40 m (slope bank)
   alignment: 'tangent',
   radius: 0,
   span: 58.5, // 178 kgf/m² tangent max span per Image 1
@@ -94,20 +96,39 @@ export const useOheStore = create<OheState>((set) => ({
   setStepLevel: (stepLevel) =>
     set((state) => {
       const clamped = Math.max(0.00, Math.min(2.00, Number(stepLevel.toFixed(2))));
-      // Auto-select foundation type based on RDSO Cess Step Level engineering rule:
-      // C <= 0.70m: B-Type (Side Bearing, Normal Ground)
-      // 0.70m < C <= 1.00m: BG-Type (Side Gravity, Embankment Slope)
-      // C > 1.00m: NG-Type (Pure Gravity, Deep Cess Drop-off)
+      const e = state.shoulderWidth ?? 0.60;
+      // Auto-select foundation type based on RDSO Cess Step Level (C) & Shoulder Width (e):
+      // e < 0.20m OR C > 1.00m: NG-Type (Pure Gravity, Deep Cess Drop-off / Slope Edge)
+      // e < 0.50m OR (0.70m < C <= 1.00m): BG-Type (Side Gravity, Embankment Slope)
+      // C <= 0.70m AND e >= 0.50m: B-Type (Side Bearing, Normal Firm Ground)
       let autoFdn: FoundationTypeKey = state.selectedFoundationType;
-      if (clamped <= 0.70) {
-        autoFdn = 'bType';
-      } else if (clamped <= 1.00) {
+      if (e < 0.20 || clamped > 1.00) {
+        autoFdn = 'ngType';
+      } else if (e < 0.50 || clamped > 0.70) {
         autoFdn = 'bgType';
       } else {
-        autoFdn = 'ngType';
+        autoFdn = 'bType';
       }
       return {
         stepLevel: clamped,
+        selectedFoundationType: autoFdn,
+      };
+    }),
+
+  setShoulderWidth: (shoulderWidth) =>
+    set((state) => {
+      const clamped = Math.max(0.05, Math.min(1.20, Number(shoulderWidth.toFixed(2))));
+      const c = state.stepLevel ?? 0.50;
+      let autoFdn: FoundationTypeKey = state.selectedFoundationType;
+      if (clamped < 0.20 || c > 1.00) {
+        autoFdn = 'ngType';
+      } else if (clamped < 0.50 || c > 0.70) {
+        autoFdn = 'bgType';
+      } else {
+        autoFdn = 'bType';
+      }
+      return {
+        shoulderWidth: clamped,
         selectedFoundationType: autoFdn,
       };
     }),
@@ -178,6 +199,7 @@ export const useOheStore = create<OheState>((set) => ({
       implantationMode: 'standard',
       implantation: null,
       stepLevel: 0.50,
+      shoulderWidth: 0.60,
       alignment: null,
       radius: 1000,
       span: 49.5,
@@ -192,6 +214,7 @@ export const useOheStore = create<OheState>((set) => ({
         implantationMode: 'custom',
         implantation: 3.50, // 3.50 m within 2.80 - 3.80 m range (Tier 2, Sheet 14)
         stepLevel: 0.90, // 0.90 m Cess Level (triggers BG-Type BG-9 per Image 2)
+        shoulderWidth: 0.40, // 0.40 m Cess Shoulder Width (slope bank -> BG-Type)
         alignment: 'tangent',
         radius: 0,
         span: 58.5, // 58.5 m permissible span per Image 1
@@ -206,6 +229,7 @@ export const useOheStore = create<OheState>((set) => ({
         implantationMode: 'custom',
         implantation: 4.20,
         stepLevel: 0.85,
+        shoulderWidth: 0.35,
         alignment: 'inside',
         radius: 800,
         span: 45.0,
@@ -220,6 +244,7 @@ export const useOheStore = create<OheState>((set) => ({
         implantationMode: 'custom',
         implantation: 3.50,
         stepLevel: 0.50,
+        shoulderWidth: 0.70,
         alignment: 'tangent',
         radius: 0,
         span: 58.5,
@@ -234,6 +259,7 @@ export const useOheStore = create<OheState>((set) => ({
         implantationMode: 'custom',
         implantation: 3.50,
         stepLevel: 1.20, // excess step > 1.00m requiring super block (H = 0.70m) & NG-Type
+        shoulderWidth: 0.15, // narrow slope edge (<0.20m) requiring NG-Type
         alignment: 'tangent',
         radius: 0,
         span: 58.5,

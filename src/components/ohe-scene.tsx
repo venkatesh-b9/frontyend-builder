@@ -100,6 +100,30 @@ function createMaterials(wireframe: boolean) {
       roughness: 0.6,
       wireframe,
     }),
+    plateMetal: new THREE.MeshStandardMaterial({
+      color: '#1e293b',
+      metalness: 0.9,
+      roughness: 0.25,
+      wireframe,
+    }),
+    badgeSignal: new THREE.MeshStandardMaterial({
+      color: '#eab308',
+      metalness: 0.5,
+      roughness: 0.3,
+      wireframe,
+    }),
+    badgeAccent: new THREE.MeshStandardMaterial({
+      color: '#38bdf8',
+      metalness: 0.6,
+      roughness: 0.3,
+      wireframe,
+    }),
+    anchorLine: new THREE.MeshStandardMaterial({
+      color: '#f97316',
+      metalness: 0.8,
+      roughness: 0.3,
+      wireframe,
+    }),
   };
 }
 
@@ -506,61 +530,178 @@ function buildOheAssembly(
     }
   }
 
-  // 6. Cantilever Assembly (Stay tube, Bracket tube, Register arm, Insulators)
+  // 6. Technical Mast Identification Plate on the front face of the mast (at Y = castingTopY + 2.50m)
+  const plateY = castingTopY + 2.50;
+  const plateFrontX = mastX + 0.08;
+  // Steel Backing Plate
+  addBox(group, plateFrontX, plateY, 0, 0.015, 0.38, 0.28, mat.plateMetal);
+  // Mast Role Indicator Bar (signal yellow for ACC/ACA/OLC/OLI/BWA, cyan for Normal N)
+  const roleBadgeMat = config.role === 'N/NACC' ? mat.badgeAccent : mat.badgeSignal;
+  addBox(group, plateFrontX + 0.01, plateY + 0.10, 0, 0.012, 0.06, 0.24, roleBadgeMat);
+  // Mast Section Specification Bar (cyan steel)
+  addBox(group, plateFrontX + 0.01, plateY - 0.06, 0, 0.012, 0.08, 0.24, mat.badgeAccent);
+  // 4 Corner Mounting Rivets
+  const rivetOffsets: [number, number][] = [
+    [0.15, 0.11],
+    [0.15, -0.11],
+    [-0.15, 0.11],
+    [-0.15, -0.11],
+  ];
+  for (const [dy, dz] of rivetOffsets) {
+    addBox(group, plateFrontX + 0.01, plateY + dy, dz, 0.012, 0.02, 0.02, mat.steel);
+  }
+
+  // 7. Cantilever Assembly & Overhead Conductors (Tailored to Mast Role)
+  const role = config.role ?? 'N/NACC';
+  const isOverlap = role === 'OLC' || role === 'OLI';
+  const isAcc = role === 'ACC';
+  const isAca = role === 'ACA';
+
   const contactY = 5.60;
   const catenaryY = 6.80;
   const contactStagger = config.alignment === 'inside' ? 0.20 : config.alignment === 'outside' ? -0.20 : 0.15;
   const contactX = contactStagger;
 
-  // Bracket tube
-  addRod(group, [mastX, castingTopY + 5.90, 0], [contactX - 0.25, 6.75, 0], 0.038, mat.steel);
-  // Top Stay tube
-  addRod(group, [mastX, castingTopY + 7.60, 0], [contactX, catenaryY + 0.1, 0], 0.032, mat.steel);
-  // Register arm
-  addRod(group, [contactX - 0.70, 5.75, 0], [contactX + 0.10, 5.75, 0], 0.025, mat.steel);
-  // Steady arm
-  addRod(group, [contactX - 0.15, 5.75, 0], [contactX, contactY, 0], 0.018, mat.steel);
+  if (isOverlap) {
+    // ------------------------------------------------------------------------
+    // DUAL CANTILEVERS (OLC - Overlap Central / OLI - Overlap Intermediate)
+    // ------------------------------------------------------------------------
+    // Run 1: In-run main track OHE (Z = -0.24)
+    const z1 = -0.24;
+    addRod(group, [mastX, castingTopY + 5.90, z1], [contactX - 0.25, 6.75, z1], 0.038, mat.steel);
+    addRod(group, [mastX, castingTopY + 7.60, z1], [contactX, catenaryY + 0.10, z1], 0.032, mat.steel);
+    addRod(group, [contactX - 0.70, 5.75, z1], [contactX + 0.10, 5.75, z1], 0.025, mat.steel);
+    addRod(group, [contactX - 0.15, 5.75, z1], [contactX, contactY, z1], 0.018, mat.steel);
 
-  // Porcelain disc insulator bells
-  for (const iy of [castingTopY + 5.90, castingTopY + 7.60]) {
-    const insMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.08, 0.45, 8), mat.porcelain);
-    insMesh.position.set(mastX + 0.35, iy, 0);
-    insMesh.rotation.z = Math.PI / 2;
-    group.add(insMesh);
-  }
-
-  // 7. Overhead Conductors (Contact & Catenary wires)
-  addRod(group, [contactX, contactY, -7], [contactX, contactY, 7], 0.014, mat.contactWire);
-  addRod(group, [contactX, catenaryY, -7], [contactX, catenaryY, 7], 0.012, mat.catenaryWire);
-
-  // Droppers connecting catenary wire to contact wire
-  for (const dz of [-4.5, -2.2, 0, 2.2, 4.5]) {
-    addRod(group, [contactX, catenaryY, dz], [contactX, contactY + 0.02, dz], 0.006, mat.contactWire);
-  }
-
-  // 8. If BWA (Balance Weight Anchor): Guy Rod at 45°, Anchor Block, 3-Pulley ATD, Counterweights
-  if (isBwa) {
-    const anchorDistance = 4.2;
-    const anchorX = mastX - anchorDistance;
-    addBox(group, anchorX, -0.8, 0, 1.2, 1.6, 1.2, mat.concrete);
-    addBox(group, anchorX, 0.15, 0, 0.8, 0.3, 0.8, mat.concreteMuff);
-
-    // Guy rod at 45 degrees
-    addRod(group, [mastX, castingTopY + 7.8, 0], [anchorX, 0.25, 0], 0.025, mat.steel);
-
-    // 3-Pulley Auto Tensioning Device (ATD) bracket
-    addBox(group, mastX - 0.35, castingTopY + 7.2, 0, 0.45, 0.15, 0.25, mat.darkSteel);
-    for (const pOffset of [-0.08, 0.0, 0.08]) {
-      const pulley = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.04, 16), mat.darkSteel);
-      pulley.position.set(mastX - 0.45, castingTopY + 7.2, pOffset);
-      pulley.rotation.x = Math.PI / 2;
-      group.add(pulley);
+    // Porcelain Insulators for Run 1
+    for (const iy of [castingTopY + 5.90, castingTopY + 7.60]) {
+      const insMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.08, 0.45, 8), mat.porcelain);
+      insMesh.position.set(mastX + 0.35, iy, z1);
+      insMesh.rotation.z = Math.PI / 2;
+      group.add(insMesh);
     }
 
-    // Counterweight stack
-    addRod(group, [mastX - 0.45, 1.0, 0], [mastX - 0.45, castingTopY + 6.8, 0], 0.016, mat.steel);
-    for (let c = 0; c < 14; c++) {
-      addBox(group, mastX - 0.45, 1.3 + c * 0.12, 0, 0.45, 0.09, 0.45, mat.counterweight);
+    // Run 2: Out-of-run transitioning OHE (Z = +0.24, higher by 0.15m per RDSO overlap rules)
+    const z2 = 0.24;
+    const elevatedContactY = contactY + 0.15;
+    const elevatedCatenaryY = catenaryY + 0.15;
+    const elevatedContactX = contactX + 0.35;
+    addRod(group, [mastX, castingTopY + 6.05, z2], [elevatedContactX - 0.25, 6.90, z2], 0.038, mat.steel);
+    addRod(group, [mastX, castingTopY + 7.75, z2], [elevatedContactX, elevatedCatenaryY + 0.10, z2], 0.032, mat.steel);
+    addRod(group, [elevatedContactX - 0.70, elevatedContactY + 0.15, z2], [elevatedContactX + 0.10, elevatedContactY + 0.15, z2], 0.025, mat.steel);
+    addRod(group, [elevatedContactX - 0.15, elevatedContactY + 0.15, z2], [elevatedContactX, elevatedContactY, z2], 0.018, mat.steel);
+
+    // Porcelain Insulators for Run 2
+    for (const iy of [castingTopY + 6.05, castingTopY + 7.75]) {
+      const insMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.08, 0.45, 8), mat.porcelain);
+      insMesh.position.set(mastX + 0.35, iy, z2);
+      insMesh.rotation.z = Math.PI / 2;
+      group.add(insMesh);
+    }
+
+    // Overhead Conductors for Run 1
+    addRod(group, [contactX, contactY, -7], [contactX, contactY, 7], 0.014, mat.contactWire);
+    addRod(group, [contactX, catenaryY, -7], [contactX, catenaryY, 7], 0.012, mat.catenaryWire);
+    for (const dz of [-4.5, -2.2, 0, 2.2, 4.5]) {
+      addRod(group, [contactX, catenaryY, dz], [contactX, contactY + 0.02, dz], 0.006, mat.contactWire);
+    }
+
+    // Overhead Conductors for Run 2 (Parallel Overlap Run)
+    addRod(group, [elevatedContactX, elevatedContactY, -7], [elevatedContactX, elevatedContactY, 7], 0.014, mat.catenaryWire);
+    addRod(group, [elevatedContactX, elevatedCatenaryY, -7], [elevatedContactX, elevatedCatenaryY, 7], 0.012, mat.contactWire);
+    for (const dz of [-4.5, -2.2, 0, 2.2, 4.5]) {
+      addRod(group, [elevatedContactX, elevatedCatenaryY, dz], [elevatedContactX, elevatedContactY + 0.02, dz], 0.006, mat.contactWire);
+    }
+
+  } else {
+    // ------------------------------------------------------------------------
+    // SINGLE CANTILEVER (N / NACC, ACC, ACA, OLA / BWA)
+    // ------------------------------------------------------------------------
+    addRod(group, [mastX, castingTopY + 5.90, 0], [contactX - 0.25, 6.75, 0], 0.038, mat.steel);
+    addRod(group, [mastX, castingTopY + 7.60, 0], [contactX, catenaryY + 0.1, 0], 0.032, mat.steel);
+    addRod(group, [contactX - 0.70, 5.75, 0], [contactX + 0.10, 5.75, 0], 0.025, mat.steel);
+    addRod(group, [contactX - 0.15, 5.75, 0], [contactX, contactY, 0], 0.018, mat.steel);
+
+    // Porcelain disc insulator bells
+    for (const iy of [castingTopY + 5.90, castingTopY + 7.60]) {
+      const insMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.08, 0.45, 8), mat.porcelain);
+      insMesh.position.set(mastX + 0.35, iy, 0);
+      insMesh.rotation.z = Math.PI / 2;
+      group.add(insMesh);
+    }
+
+    // Overhead Conductors (Contact & Catenary wires)
+    addRod(group, [contactX, contactY, -7], [contactX, contactY, 7], 0.014, mat.contactWire);
+    addRod(group, [contactX, catenaryY, -7], [contactX, catenaryY, 7], 0.012, mat.catenaryWire);
+
+    // Droppers connecting catenary wire to contact wire
+    for (const dz of [-4.5, -2.2, 0, 2.2, 4.5]) {
+      addRod(group, [contactX, catenaryY, dz], [contactX, contactY + 0.02, dz], 0.006, mat.contactWire);
+    }
+
+    // ------------------------------------------------------------------------
+    // ROLE: ACC (Anti-Creep Centre Mast Equipment)
+    // ------------------------------------------------------------------------
+    if (isAcc) {
+      // Bi-metallic center clamp on catenary
+      addBox(group, contactX, catenaryY, 0, 0.12, 0.10, 0.25, mat.badgeSignal);
+      // Twin anti-creep anchor struts from catenary clamp back to mast fittings
+      for (const dz of [-0.25, 0.25]) {
+        addRod(group, [mastX + 0.06, castingTopY + 7.20, dz], [contactX, catenaryY, 0], 0.022, mat.steel);
+        const strutIns = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.07, 0.35, 8), mat.porcelain);
+        strutIns.position.set(mastX + 0.80, castingTopY + 7.15, dz * 0.7);
+        strutIns.rotation.z = Math.PI / 2;
+        group.add(strutIns);
+      }
+      // Longitudinal anti-creep messenger wire spanning along catenary level
+      addRod(group, [contactX, catenaryY + 0.08, -5], [contactX, catenaryY + 0.08, 5], 0.010, mat.anchorLine);
+    }
+
+    // ------------------------------------------------------------------------
+    // ROLE: ACA (Anti-Creep Anchor Mast Equipment)
+    // ------------------------------------------------------------------------
+    if (isAca) {
+      const acaAnchorX = mastX - 3.20;
+      // Ground concrete anchor block
+      addBox(group, acaAnchorX, -0.4, 0, 0.9, 0.8, 0.9, mat.concrete);
+      addBox(group, acaAnchorX, 0.10, 0, 0.6, 0.2, 0.6, mat.concreteMuff);
+      // 45° Anti-creep termination guy wire from top catenary level to ground anchor
+      addRod(group, [mastX, castingTopY + 7.40, 0], [acaAnchorX, 0.20, 0], 0.020, mat.anchorLine);
+      // Porcelain strain insulator along guy wire
+      const strainIns = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.08, 0.40, 8), mat.porcelain);
+      strainIns.position.set(mastX - 1.20, castingTopY + 4.80, 0);
+      strainIns.rotation.z = Math.atan2(castingTopY + 7.20, 3.20);
+      group.add(strainIns);
+      // Turnbuckle tightening fitting
+      addBox(group, acaAnchorX + 0.25, 0.45, 0, 0.08, 0.15, 0.08, mat.darkSteel);
+    }
+
+    // ------------------------------------------------------------------------
+    // ROLE: OLA / BWA (Balance Weight Anchor Mast Equipment)
+    // ------------------------------------------------------------------------
+    if (isBwa) {
+      const anchorDistance = 4.2;
+      const anchorX = mastX - anchorDistance;
+      addBox(group, anchorX, -0.8, 0, 1.2, 1.6, 1.2, mat.concrete);
+      addBox(group, anchorX, 0.15, 0, 0.8, 0.3, 0.8, mat.concreteMuff);
+
+      // Guy rod at 45 degrees
+      addRod(group, [mastX, castingTopY + 7.8, 0], [anchorX, 0.25, 0], 0.025, mat.steel);
+
+      // 3-Pulley Auto Tensioning Device (ATD) bracket
+      addBox(group, mastX - 0.35, castingTopY + 7.2, 0, 0.45, 0.15, 0.25, mat.darkSteel);
+      for (const pOffset of [-0.08, 0.0, 0.08]) {
+        const pulley = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.04, 16), mat.darkSteel);
+        pulley.position.set(mastX - 0.45, castingTopY + 7.2, pOffset);
+        pulley.rotation.x = Math.PI / 2;
+        group.add(pulley);
+      }
+
+      // Counterweight stack
+      addRod(group, [mastX - 0.45, 1.0, 0], [mastX - 0.45, castingTopY + 6.8, 0], 0.016, mat.steel);
+      for (let c = 0; c < 14; c++) {
+        addBox(group, mastX - 0.45, 1.3 + c * 0.12, 0, 0.45, 0.09, 0.45, mat.counterweight);
+      }
     }
   }
 
