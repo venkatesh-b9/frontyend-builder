@@ -138,6 +138,7 @@ export const BG_TYPE_SPECS: Record<string, { a: number; b: number; c: number; h:
   'BG-9':  { a: 2.00, b: 1.70, c: 0.80, h: 1.60, vol: 3.808, muffNorm: 0.02, muffBwa: 0.08 },
   'BG-10': { a: 2.00, b: 1.90, c: 0.80, h: 1.60, vol: 4.256, muffNorm: 0.02, muffBwa: 0.08 },
   'BG-11': { a: 2.00, b: 2.10, c: 0.80, h: 1.60, vol: 4.704, muffNorm: 0.02, muffBwa: 0.08 },
+  'BG-12': { a: 2.00, b: 2.30, c: 0.80, h: 1.60, vol: 5.152, muffNorm: 0.02, muffBwa: 0.08 },
   'BG-13': { a: 2.00, b: 2.50, c: 0.80, h: 1.60, vol: 5.600, muffNorm: 0.02, muffBwa: 0.08 },
   'BG-14': { a: 2.00, b: 2.70, c: 0.80, h: 1.60, vol: 6.048, muffNorm: 0.02, muffBwa: 0.08 },
 };
@@ -1245,9 +1246,8 @@ export function getAllMastFunctionsResolution(
       mastPreference
     );
     const scheduleRow: KecScheduleRow = KEC_FDN_SCHEDULE[params.fbmCode] ?? KEC_FDN_SCHEDULE[140]!;
-    const fbmHundred = Math.floor(params.fbmCode / 100);
-    const fbmVerticalLoad = fbmHundred === 1 ? 700 : fbmHundred === 2 ? 1600 : 3000;
-    const fbmMoment = (params.fbmCode % 100) * 100;
+    const fbmVerticalLoad = scheduleRow.load;
+    const fbmMoment = scheduleRow.moment;
     const rec = getRecommendedFoundation(stepC, shoulderWidth, scheduleRow, params.fbmCode);
 
     return {
@@ -1362,10 +1362,10 @@ export function calculateOhe(config: OheConfig): CalculationResult {
     config.mastPreference
   );
 
-  // 8. Three-Digit FBM Code Architecture (Sheet 01 & Sheet 02)
-  const fbmHundred = Math.floor(fbmCode / 100);
-  const fbmVerticalLoad = fbmHundred === 1 ? 700 : fbmHundred === 2 ? 1600 : 3000;
-  const fbmMoment = (fbmCode % 100) * 100;
+  // 8. EXACT KEC SCHEDULE LOOKUP (PDF 2 Sheet No. 01 & Sheet No. 02)
+  const scheduleRow: KecScheduleRow = KEC_FDN_SCHEDULE[fbmCode] ?? KEC_FDN_SCHEDULE[140]!;
+  const fbmVerticalLoad = scheduleRow.load;
+  const fbmMoment = scheduleRow.moment;
   const fbmBreakdown = `Direct Axial Load: ${fbmVerticalLoad.toLocaleString()} kg | Overturning Bending Moment: ${fbmMoment.toLocaleString()} kg·m`;
 
   // 9. Muff Specification (PDF 2 Page 22/23 & Image 3/4/5)
@@ -1377,9 +1377,6 @@ export function calculateOhe(config: OheConfig): CalculationResult {
       ? '0.08 m³ reinforced anchor collar with 45° guy rod anchoring pocket (Drg ETI/C/0007/68 Mod E)'
       : '0.02 m³ protective 45° chamfered concrete collar above rail/cess level',
   };
-
-  // 10. EXACT KEC SCHEDULE LOOKUP (PDF 2 Sheet No. 01 & Sheet No. 02)
-  const scheduleRow: KecScheduleRow = KEC_FDN_SCHEDULE[fbmCode] ?? KEC_FDN_SCHEDULE[140]!;
 
   const roleLabel = roles.find((r) => r.value === role)?.label ?? 'N / NACC';
   const roleTitle = roles.find((r) => r.value === role)?.title ?? 'Normal Mast';

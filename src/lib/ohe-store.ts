@@ -68,7 +68,52 @@ export const useOheStore = create<OheState>((set) => ({
       return {
         wind,
         span: nextSpan,
-        activeStep: Math.max(state.activeStep, 2),
+        activeStep: Math.max(state.activeStep, 2), // Moves to Step 2: Alignment
+      };
+    }),
+
+  setAlignment: (alignment) =>
+    set((state) => {
+      const curWind = state.wind ?? 105;
+      if (alignment === 'tangent') {
+        const span = getMaxTangentSpanForWind(curWind);
+        const imp = state.implantationMode === 'standard' ? 2.80 : state.implantation;
+        return {
+          alignment,
+          radius: 0,
+          span,
+          implantation: imp,
+          activeStep: Math.max(state.activeStep, 3), // Moves to Step 3: Implantation
+        };
+      }
+
+      // Inside or Outside Curve
+      const radius = state.radius > 0 ? state.radius : 1400;
+      const curveSpecs = getCurveScheduleForWind(curWind);
+      const matched = curveSpecs.find((c) => c.radius <= radius) ?? curveSpecs[curveSpecs.length - 1]!;
+      const imp = state.implantationMode === 'standard' ? getStandardImplantation(alignment, radius) : state.implantation;
+      return {
+        alignment,
+        radius,
+        span: matched.maxSpan,
+        implantation: imp,
+        activeStep: Math.max(state.activeStep, 3), // Moves to Step 3: Implantation
+      };
+    }),
+
+  setRadius: (radius) =>
+    set((state) => {
+      const clampedRadius = Math.max(200, Math.min(2500, radius));
+      const curWind = state.wind ?? 105;
+      const curveSpecs = getCurveScheduleForWind(curWind);
+      const matched = curveSpecs.find((c) => c.radius <= clampedRadius) ?? curveSpecs[curveSpecs.length - 1]!;
+      const curAlign = state.alignment ?? 'outside';
+      const imp = state.implantationMode === 'standard' ? getStandardImplantation(curAlign, clampedRadius) : state.implantation;
+      return {
+        radius: clampedRadius,
+        span: matched.maxSpan, // AUTOMATICALLY coupled to schedule span!
+        implantation: imp,
+        activeStep: Math.max(state.activeStep, 3),
       };
     }),
 
@@ -83,14 +128,14 @@ export const useOheStore = create<OheState>((set) => ({
       return {
         implantationMode,
         implantation: nextImp,
-        activeStep: Math.max(state.activeStep, 3),
+        activeStep: Math.max(state.activeStep, 4), // Moves to Step 4: Cess Step & Shoulder
       };
     }),
 
   setImplantation: (implantation) =>
     set((state) => ({
       implantation: Math.max(2.50, Math.min(5.00, implantation)),
-      activeStep: Math.max(state.activeStep, 3),
+      activeStep: Math.max(state.activeStep, 4), // Moves to Step 4: Cess Step & Shoulder
     })),
 
   setStepLevel: (stepLevel) =>
@@ -112,6 +157,7 @@ export const useOheStore = create<OheState>((set) => ({
       return {
         stepLevel: clamped,
         selectedFoundationType: autoFdn,
+        activeStep: Math.max(state.activeStep, 5), // Moves to Step 5: Mast Selection
       };
     }),
 
@@ -130,50 +176,7 @@ export const useOheStore = create<OheState>((set) => ({
       return {
         shoulderWidth: clamped,
         selectedFoundationType: autoFdn,
-      };
-    }),
-
-  setAlignment: (alignment) =>
-    set((state) => {
-      const curWind = state.wind ?? 105;
-      if (alignment === 'tangent') {
-        const span = getMaxTangentSpanForWind(curWind);
-        const imp = state.implantationMode === 'standard' ? 2.80 : state.implantation;
-        return {
-          alignment,
-          radius: 0,
-          span,
-          implantation: imp,
-          activeStep: Math.max(state.activeStep, 4),
-        };
-      }
-
-      // Inside or Outside Curve
-      const radius = state.radius > 0 ? state.radius : 1400;
-      const curveSpecs = getCurveScheduleForWind(curWind);
-      const matched = curveSpecs.find((c) => c.radius <= radius) ?? curveSpecs[curveSpecs.length - 1]!;
-      const imp = state.implantationMode === 'standard' ? getStandardImplantation(alignment, radius) : state.implantation;
-      return {
-        alignment,
-        radius,
-        span: matched.maxSpan,
-        implantation: imp,
-        activeStep: Math.max(state.activeStep, 4),
-      };
-    }),
-
-  setRadius: (radius) =>
-    set((state) => {
-      const clampedRadius = Math.max(200, Math.min(2500, radius));
-      const curWind = state.wind ?? 105;
-      const curveSpecs = getCurveScheduleForWind(curWind);
-      const matched = curveSpecs.find((c) => c.radius <= clampedRadius) ?? curveSpecs[curveSpecs.length - 1]!;
-      const curAlign = state.alignment ?? 'outside';
-      const imp = state.implantationMode === 'standard' ? getStandardImplantation(curAlign, clampedRadius) : state.implantation;
-      return {
-        radius: clampedRadius,
-        span: matched.maxSpan, // AUTOMATICALLY coupled to schedule span!
-        implantation: imp,
+        activeStep: Math.max(state.activeStep, 5), // Moves to Step 5: Mast Selection
       };
     }),
 
@@ -183,10 +186,23 @@ export const useOheStore = create<OheState>((set) => ({
     })),
 
   setRole: (role) =>
-    set(() => ({
-      role,
-      activeStep: 5, // all completed
-    })),
+    set((state) => {
+      const c = state.stepLevel ?? 0.50;
+      const e = state.shoulderWidth ?? 0.60;
+      let recType: FoundationTypeKey = 'bgType';
+      if (e < 0.20 || c > 1.00) {
+        recType = 'ngType';
+      } else if (e < 0.50 || c > 0.70) {
+        recType = 'bgType';
+      } else {
+        recType = 'bType';
+      }
+      return {
+        role,
+        selectedFoundationType: recType,
+        activeStep: 5, // All completed
+      };
+    }),
 
   setActiveStep: (step) =>
     set(() => ({

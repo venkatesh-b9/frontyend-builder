@@ -59,6 +59,60 @@ import type { SceneView } from '@/components/ohe-scene';
 
 const OheScene = lazy(() => import('@/components/ohe-scene'));
 
+const WIND_ZONE_THEMES: Record<
+  number,
+  { border: string; bg: string; selected: string; text: string; badge: string; name: string }
+> = {
+  73: {
+    border: 'border-sky-500/35',
+    bg: 'bg-sky-950/30 hover:bg-sky-900/40',
+    selected: 'border-sky-400 bg-sky-500/25 ring-2 ring-sky-400 shadow-sky-500/20 shadow-md',
+    text: 'text-sky-300',
+    badge: 'bg-sky-500/20 text-sky-200 border-sky-500/40',
+    name: 'Light Zone (33 m/s)',
+  },
+  105: {
+    border: 'border-amber-500/35',
+    bg: 'bg-amber-950/30 hover:bg-amber-900/40',
+    selected: 'border-amber-400 bg-amber-500/25 ring-2 ring-amber-400 shadow-amber-500/20 shadow-md',
+    text: 'text-amber-300',
+    badge: 'bg-amber-500/20 text-amber-200 border-amber-500/40',
+    name: 'Medium Zone (39 m/s)',
+  },
+  136: {
+    border: 'border-cyan-500/35',
+    bg: 'bg-cyan-950/30 hover:bg-cyan-900/40',
+    selected: 'border-cyan-400 bg-cyan-500/25 ring-2 ring-cyan-400 shadow-cyan-500/20 shadow-md',
+    text: 'text-cyan-300',
+    badge: 'bg-cyan-500/20 text-cyan-200 border-cyan-500/40',
+    name: 'Heavy Zone (44 m/s)',
+  },
+  155: {
+    border: 'border-emerald-500/35',
+    bg: 'bg-emerald-950/30 hover:bg-emerald-900/40',
+    selected: 'border-emerald-400 bg-emerald-500/25 ring-2 ring-emerald-400 shadow-emerald-500/20 shadow-md',
+    text: 'text-emerald-300',
+    badge: 'bg-emerald-500/20 text-emerald-200 border-emerald-500/40',
+    name: 'Heavy II Zone (47 m/s)',
+  },
+  178: {
+    border: 'border-rose-500/50',
+    bg: 'bg-rose-950/35 hover:bg-rose-900/45',
+    selected: 'border-rose-400 bg-rose-500/30 ring-2 ring-rose-400 shadow-rose-500/30 shadow-md',
+    text: 'text-rose-300 font-bold',
+    badge: 'bg-rose-500/25 text-rose-100 border-rose-500/60 font-bold',
+    name: 'Severe Zone (50 m/s / Sheet 14)',
+  },
+  216: {
+    border: 'border-purple-500/35',
+    bg: 'bg-purple-950/30 hover:bg-purple-900/40',
+    selected: 'border-purple-400 bg-purple-500/25 ring-2 ring-purple-400 shadow-purple-500/20 shadow-md',
+    text: 'text-purple-300',
+    badge: 'bg-purple-500/20 text-purple-200 border-purple-500/40',
+    name: 'Severe II Zone (55 m/s)',
+  },
+};
+
 export const Route = createFileRoute('/')({
   head: () => ({
     meta: [
@@ -403,12 +457,13 @@ function ConfiguratorPage() {
   const [showQuickGuide, setShowQuickGuide] = useState<boolean>(false);
   const [showFullSoilMatrixMobile, setShowFullSoilMatrixMobile] = useState<boolean>(false);
 
-  // Sequential validation checks
+  // Sequential validation checks (5-Step Engineering Pipeline per RDSO rules)
   const step1Done = wind !== null;
-  const step2Done = step1Done && implantation !== null;
-  const step3Done = step2Done && alignment !== null;
-  const step4Done = step3Done && role !== null;
-  const allStepsComplete = step1Done && step2Done && step3Done && step4Done;
+  const step2Done = step1Done && alignment !== null;
+  const step3Done = step2Done && implantation !== null;
+  const step4Done = step3Done && stepLevel !== undefined && shoulderWidth !== undefined;
+  const step5Done = step4Done && role !== null;
+  const allStepsComplete = step1Done && step2Done && step3Done && step4Done && step5Done;
 
   const result = useMemo(
     () =>
@@ -736,7 +791,7 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
             <SlidersHorizontal className="size-3.5" />
             <span>Wizard</span>
             <span className="rounded-full bg-panel-deep px-1.5 py-0.2 font-mono text-[9px]">
-              {[step1Done, step2Done, step3Done, step4Done].filter(Boolean).length}/4
+              {[step1Done, step2Done, step3Done, step4Done, step5Done].filter(Boolean).length}/5
             </span>
           </button>
 
@@ -793,7 +848,7 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                 <div className="font-mono text-[10px] text-muted-foreground">
                   PROGRESS:{' '}
                   <span className="font-bold text-signal">
-                    {[step1Done, step2Done, step3Done, step4Done].filter(Boolean).length}/4
+                    {[step1Done, step2Done, step3Done, step4Done, step5Done].filter(Boolean).length}/5
                   </span>
                 </div>
               </div>
@@ -802,7 +857,7 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                 <div
                   className="h-full bg-signal transition-all duration-300"
                   style={{
-                    width: `${([step1Done, step2Done, step3Done, step4Done].filter(Boolean).length / 4) * 100}%`,
+                    width: `${([step1Done, step2Done, step3Done, step4Done, step5Done].filter(Boolean).length / 5) * 100}%`,
                   }}
                 />
               </div>
@@ -822,24 +877,38 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                     {windZones.map((zone) => {
                       const isSelected = wind === zone.value;
+                      const theme = WIND_ZONE_THEMES[zone.value] ?? {
+                        border: 'border-border',
+                        bg: 'bg-panel hover:bg-panel-deep',
+                        selected: 'border-signal bg-signal/10 ring-1 ring-signal',
+                        text: 'text-signal',
+                        badge: 'bg-panel-deep text-foreground border-border',
+                        name: zone.zone,
+                      };
                       return (
                         <button
                           key={zone.value}
                           type="button"
                           onClick={() => setWind(zone.value)}
-                          className={`flex min-h-[58px] flex-col items-start rounded border p-2.5 text-left transition-all active:scale-[0.98] ${
+                          className={`flex min-h-[66px] flex-col items-start rounded-lg border p-2.5 text-left transition-all active:scale-[0.98] ${
                             isSelected
-                              ? 'border-signal bg-signal/10 ring-1 ring-signal'
-                              : 'border-border bg-panel hover:border-border hover:bg-panel-deep'
+                              ? theme.selected
+                              : `${theme.border} ${theme.bg}`
                           }`}
                         >
                           <div className="flex w-full items-center justify-between">
                             <span className="font-mono text-xs font-bold text-foreground">
                               {zone.value} <span className="text-[10px] font-normal text-muted-foreground">kgf/m²</span>
                             </span>
-                            {isSelected && <Check className="size-3 text-signal" />}
+                            {isSelected ? (
+                              <Check className="size-3.5 text-foreground stroke-[3]" />
+                            ) : (
+                              <span className={`rounded px-1 py-0.2 font-mono text-[8.5px] border ${theme.badge}`}>
+                                {zone.speed}
+                              </span>
+                            )}
                           </div>
-                          <span className="mt-1 text-[10px] font-medium text-signal">
+                          <span className={`mt-1 text-[10px] font-bold ${theme.text}`}>
                             {zone.zone} ({zone.speed})
                           </span>
                           <span className="mt-0.5 truncate text-[9px] text-muted-foreground" title={zone.desc}>
@@ -850,23 +919,216 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                     })}
                   </div>
                   {wind && (
-                    <div className="mt-3 flex items-center gap-2 font-mono text-[10px] text-muted-foreground">
-                      <CheckCircle2 className="size-3.5 text-success" />
-                      Wind Zone: <strong className="text-foreground">{wind} kgf/m²</strong> (
-                      {windZones.find((z) => z.value === wind)?.zone})
+                    <div className="mt-3 flex items-center justify-between rounded-lg border border-border/80 bg-panel px-3 py-2 font-mono text-[10px]">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="size-3.5 text-success shrink-0" />
+                        <span>Wind Pressure: <strong className="text-foreground">{wind} kgf/m²</strong> ({windZones.find((z) => z.value === wind)?.zone})</span>
+                      </div>
+                      <Badge variant="outline" className={WIND_ZONE_THEMES[wind]?.badge ?? 'border-border'}>
+                        {wind === 178 ? 'Sheet 14 (Img 1)' : 'RDSO Matrix'}
+                      </Badge>
                     </div>
                   )}
                 </div>
               </section>
 
-              {/* STEP 2: Implantation & Cess Step Level Difference (C) */}
+              {/* STEP 3: Alignment & Curve Parameters */}
               <section className={!step1Done ? 'opacity-40 pointer-events-none' : 'bg-panel-deep/30'}>
                 <StepHeader
                   number="2"
-                  title="Implantation & Cess Step (C)"
-                  subtitle="Setting distance, Cess Step C, and Super Block Engine"
+                  title="Track Alignment & Curvature"
+                  subtitle="Tangent or Curvature with dynamic Versine & Clearance"
                   completed={step2Done}
                   active={step1Done && !step2Done}
+                />
+                <div className="p-3.5 sm:p-5 space-y-4">
+                  {/* Segmented Control */}
+                  <div className="grid grid-cols-3 gap-1 rounded border border-border bg-panel-deep p-1">
+                    {[
+                      { key: 'tangent', label: 'Tangent' },
+                      { key: 'inside', label: 'Inside Curve' },
+                      { key: 'outside', label: 'Outside Curve' },
+                    ].map((item) => (
+                      <button
+                        key={item.key}
+                        type="button"
+                        onClick={() => setAlignment(item.key as Alignment)}
+                        className={`rounded py-2 text-[11px] font-semibold transition-all active:scale-[0.98] ${
+                          alignment === item.key
+                            ? 'bg-primary text-primary-foreground shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Curve Parameters */}
+                  {alignment && alignment !== 'tangent' && (
+                    <div className="rounded border border-border/80 bg-panel p-3.5 space-y-3.5">
+                      {/* Standard RDSO Curve Radii Quick Selector (PDF 1 Discrete Rows) */}
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <label className="text-[11px] font-bold uppercase text-foreground">
+                            1. Select Curve Radius (R)
+                          </label>
+                          <span className="font-mono text-xs font-bold text-signal">{radius} m</span>
+                        </div>
+                        <div className="mt-2 grid grid-cols-3 gap-1.5 sm:grid-cols-4 lg:grid-cols-6">
+                          {RDSO_CURVE_RADII.map((rVal) => {
+                            const curveSpecs = getCurveScheduleForWind(wind ?? 105);
+                            const matched = curveSpecs.find((c) => c.radius <= rVal) ?? curveSpecs[curveSpecs.length - 1]!;
+                            const isSelected = radius === rVal;
+                            return (
+                              <button
+                                key={rVal}
+                                type="button"
+                                onClick={() => setRadius(rVal)}
+                                className={`flex flex-col items-center justify-center rounded border p-1.5 transition-all text-center ${
+                                  isSelected
+                                    ? 'border-signal bg-signal/15 ring-1 ring-signal text-foreground font-bold'
+                                    : 'border-border bg-panel-deep/60 hover:bg-panel-deep text-muted-foreground hover:text-foreground'
+                                }`}
+                              >
+                                <span className="font-mono text-xs font-bold">{rVal}m</span>
+                                <span className="font-mono text-[9px] text-signal font-semibold">
+                                  {matched.maxSpan}m span
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Slider and Input for Custom Radius */}
+                      <div className="pt-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] uppercase font-semibold text-muted-foreground">Fine Radius Adjustment</span>
+                          <span className="font-mono text-[10px] text-muted-foreground">200 m – 2500 m</span>
+                        </div>
+                        <Slider
+                          min={200}
+                          max={2500}
+                          step={50}
+                          value={[radius]}
+                          onValueChange={(vals) => setRadius(vals[0] ?? 1000)}
+                          className="mt-1.5 py-1"
+                        />
+                      </div>
+
+                      {/* Schedule Coupling Banner (PDF 1 Automatic Rule) */}
+                      <div className="rounded border border-primary/40 bg-primary/10 p-2.5 text-[11px] space-y-1">
+                        <div className="flex flex-wrap items-center justify-between gap-1 font-bold text-primary">
+                          <span className="flex items-center gap-1.5">
+                            <Sparkles className="size-3.5" /> PDF 1 Schedule Auto-Coupled
+                          </span>
+                          <span className="font-mono text-[10px] text-primary">
+                            {result.sheetInfo.sheetDrawing}
+                          </span>
+                        </div>
+                        <p className="text-[10px] leading-relaxed text-muted-foreground">
+                          Radius <strong>{radius} m</strong> on {alignment === 'inside' ? 'Inside Curve' : 'Outside Curve'} auto-selects OHE Span to{' '}
+                          <strong className="text-signal">{result.maxPermissibleSpan} m</strong> with Max Versine{' '}
+                          <strong className="text-signal">{result.maxScheduleVersine} mm</strong> per RDSO Employment Schedule.
+                        </p>
+                      </div>
+
+                      {/* Span Selector */}
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                            2. OHE Span Length (m)
+                          </label>
+                          {span > result.maxPermissibleSpan && (
+                            <button
+                              type="button"
+                              onClick={() => setSpan(result.maxPermissibleSpan)}
+                              className="font-mono text-[10px] text-destructive underline hover:text-destructive/80 font-bold"
+                            >
+                              Reset to Schedule Max ({result.maxPermissibleSpan}m)
+                            </button>
+                          )}
+                        </div>
+                        <Select value={String(span)} onValueChange={(val) => setSpan(parseFloat(val))}>
+                          <SelectTrigger className="mt-1.5 h-8 border-border bg-panel-deep font-mono text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {spans.map((s) => (
+                              <SelectItem
+                                key={s}
+                                value={String(s)}
+                                className={`font-mono text-xs ${s > result.maxPermissibleSpan ? 'text-destructive' : ''}`}
+                              >
+                                {s.toFixed(1)} m span {s === result.maxPermissibleSpan ? '★ (Schedule Max)' : s > result.maxPermissibleSpan ? '⚠️ (Exceeds Max!)' : ''}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {span > result.maxPermissibleSpan && (
+                          <div className="mt-1.5 flex items-start gap-1 rounded bg-destructive/10 border border-destructive/30 p-1.5 text-[10px] text-destructive">
+                            <AlertTriangle className="size-3.5 shrink-0 mt-0.5" />
+                            <span>Warning: Selected span ({span}m) exceeds RDSO maximum permissible span of {result.maxPermissibleSpan}m for R={radius}m.</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Dynamic Versine Readout */}
+                      <div className="flex items-center justify-between rounded bg-panel-deep px-3 py-2 border border-border">
+                        <span className="font-mono text-[10px] uppercase text-muted-foreground">
+                          Versine: S² / (8 × R) × 1000
+                        </span>
+                        <span className="font-mono text-xs font-bold text-signal">
+                          {result.versine.toFixed(1)} mm
+                        </span>
+                      </div>
+
+                      {/* Inside Curve Clearance Auto-enforce Notice */}
+                      {alignment === 'inside' && !result.settingValid && (
+                        <div className="flex items-start gap-2 rounded border border-destructive/40 bg-destructive/10 p-2.5 text-[11px] text-destructive">
+                          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                          <span>
+                            Setting distance ({(implantation ?? result.minSetting).toFixed(2)} m) is below the RDSO minimum (
+                            {result.minSetting.toFixed(2)} m) required for an inside curve of radius {radius} m per PDF 2 Page 37.
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {alignment === 'tangent' && (
+                    <div className="rounded border border-border bg-panel p-3 text-[11px] space-y-2">
+                      <div className="flex items-center justify-between font-mono text-[10px]">
+                        <span className="text-muted-foreground">Track Alignment:</span>
+                        <span className="text-foreground font-bold">Straight Tangent (Radius: ∞)</span>
+                      </div>
+                      <div className="flex items-center justify-between font-mono text-[10px]">
+                        <span className="text-muted-foreground">Permissible OHE Span:</span>
+                        <span className="text-signal font-bold">{result.maxPermissibleSpan} m</span>
+                      </div>
+                      <div className="flex items-center justify-between font-mono text-[10px]">
+                        <span className="text-muted-foreground">Versine / Stagger:</span>
+                        <span className="text-foreground font-semibold">0.0 mm</span>
+                      </div>
+                      <div className="flex items-center justify-between font-mono text-[10px]">
+                        <span className="text-muted-foreground">Schedule Drawing:</span>
+                        <span className="text-primary font-bold">{result.sheetInfo.sheetDrawing} (Row 1)</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </section>
+
+
+              {/* STEP 3: Implantation Selection (2.80 m – 5.00 m) */}
+              <section className={!step2Done ? 'opacity-40 pointer-events-none' : 'bg-panel-deep/30'}>
+                <StepHeader
+                  number="3"
+                  title="Implantation Selection"
+                  subtitle="Auto-Standard Setting & Implantation Tier Classification"
+                  completed={step3Done}
+                  active={step2Done && !step3Done}
                 />
                 <div className="p-3.5 sm:p-5 space-y-4">
                   {/* 1. Implantation Mode Cards */}
@@ -1025,7 +1287,19 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                       )}
                     </div>
                   </div>
+                </div>
+              </section>
 
+              {/* STEP 4: Cess Step Level Difference (C) & Cess Shoulder Width (e) */}
+              <section className={!step3Done ? 'opacity-40 pointer-events-none' : 'bg-panel-deep/30'}>
+                <StepHeader
+                  number="4"
+                  title="Cess Step (C) & Shoulder Width (e)"
+                  subtitle="Super Block Engine (H_sb = C - 0.50m) & Soil Foundation Rules"
+                  completed={step4Done}
+                  active={step3Done && !step4Done}
+                />
+                <div className="p-3.5 sm:p-5 space-y-4">
                   {/* 2. Cess Step Level Difference (C) & Super Block Engineering */}
                   <div className="rounded border border-border/80 bg-panel p-3.5 space-y-3">
                     <div className="flex items-center justify-between">
@@ -1349,236 +1623,87 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                       </span>
                     </div>
                   </div>
-                </div>
-              </section>
-
-              {/* STEP 3: Alignment & Curve Parameters */}
-              <section className={!step2Done ? 'opacity-40 pointer-events-none' : 'bg-panel-deep/30'}>
-                <StepHeader
-                  number="3"
-                  title="Track Alignment & Curvature"
-                  subtitle="Tangent or Curvature with dynamic Versine & Clearance"
-                  completed={step3Done}
-                  active={step2Done && !step3Done}
-                />
-                <div className="p-3.5 sm:p-5 space-y-4">
-                  {/* Segmented Control */}
-                  <div className="grid grid-cols-3 gap-1 rounded border border-border bg-panel-deep p-1">
-                    {[
-                      { key: 'tangent', label: 'Tangent' },
-                      { key: 'inside', label: 'Inside Curve' },
-                      { key: 'outside', label: 'Outside Curve' },
-                    ].map((item) => (
-                      <button
-                        key={item.key}
-                        type="button"
-                        onClick={() => setAlignment(item.key as Alignment)}
-                        className={`rounded py-2 text-[11px] font-semibold transition-all active:scale-[0.98] ${
-                          alignment === item.key
-                            ? 'bg-primary text-primary-foreground shadow-sm'
-                            : 'text-muted-foreground hover:text-foreground'
-                        }`}
+                  {/* Real-time RDSO Slope Standard & Foundation Selection Rule banner */}
+                  <div className="rounded-lg border border-border bg-panel-deep p-3 space-y-1.5 font-mono text-[10px]">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground uppercase font-bold">Coupled Foundation Rule:</span>
+                      <Badge
+                        variant="outline"
+                        className={
+                          result.recommendedFoundation.typeKey === 'bType'
+                            ? 'border-success/50 bg-success/15 text-success font-bold'
+                            : result.recommendedFoundation.typeKey === 'bgType'
+                            ? 'border-signal/50 bg-signal/15 text-signal font-bold'
+                            : 'border-destructive/50 bg-destructive/15 text-destructive font-bold'
+                        }
                       >
-                        {item.label}
-                      </button>
-                    ))}
+                        {result.recommendedFoundation.typeName}
+                      </Badge>
+                    </div>
+                    <p className="text-[10px] text-foreground leading-relaxed">
+                      {result.recommendedFoundation.reason}
+                    </p>
                   </div>
-
-                  {/* Curve Parameters */}
-                  {alignment && alignment !== 'tangent' && (
-                    <div className="rounded border border-border/80 bg-panel p-3.5 space-y-3.5">
-                      {/* Standard RDSO Curve Radii Quick Selector (PDF 1 Discrete Rows) */}
-                      <div>
-                        <div className="flex items-center justify-between">
-                          <label className="text-[11px] font-bold uppercase text-foreground">
-                            1. Select Curve Radius (R)
-                          </label>
-                          <span className="font-mono text-xs font-bold text-signal">{radius} m</span>
-                        </div>
-                        <div className="mt-2 grid grid-cols-3 gap-1.5 sm:grid-cols-4 lg:grid-cols-6">
-                          {RDSO_CURVE_RADII.map((rVal) => {
-                            const curveSpecs = getCurveScheduleForWind(wind ?? 105);
-                            const matched = curveSpecs.find((c) => c.radius <= rVal) ?? curveSpecs[curveSpecs.length - 1]!;
-                            const isSelected = radius === rVal;
-                            return (
-                              <button
-                                key={rVal}
-                                type="button"
-                                onClick={() => setRadius(rVal)}
-                                className={`flex flex-col items-center justify-center rounded border p-1.5 transition-all text-center ${
-                                  isSelected
-                                    ? 'border-signal bg-signal/15 ring-1 ring-signal text-foreground font-bold'
-                                    : 'border-border bg-panel-deep/60 hover:bg-panel-deep text-muted-foreground hover:text-foreground'
-                                }`}
-                              >
-                                <span className="font-mono text-xs font-bold">{rVal}m</span>
-                                <span className="font-mono text-[9px] text-signal font-semibold">
-                                  {matched.maxSpan}m span
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* Slider and Input for Custom Radius */}
-                      <div className="pt-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] uppercase font-semibold text-muted-foreground">Fine Radius Adjustment</span>
-                          <span className="font-mono text-[10px] text-muted-foreground">200 m – 2500 m</span>
-                        </div>
-                        <Slider
-                          min={200}
-                          max={2500}
-                          step={50}
-                          value={[radius]}
-                          onValueChange={(vals) => setRadius(vals[0] ?? 1000)}
-                          className="mt-1.5 py-1"
-                        />
-                      </div>
-
-                      {/* Schedule Coupling Banner (PDF 1 Automatic Rule) */}
-                      <div className="rounded border border-primary/40 bg-primary/10 p-2.5 text-[11px] space-y-1">
-                        <div className="flex flex-wrap items-center justify-between gap-1 font-bold text-primary">
-                          <span className="flex items-center gap-1.5">
-                            <Sparkles className="size-3.5" /> PDF 1 Schedule Auto-Coupled
-                          </span>
-                          <span className="font-mono text-[10px] text-primary">
-                            {result.sheetInfo.sheetDrawing}
-                          </span>
-                        </div>
-                        <p className="text-[10px] leading-relaxed text-muted-foreground">
-                          Radius <strong>{radius} m</strong> on {alignment === 'inside' ? 'Inside Curve' : 'Outside Curve'} auto-selects OHE Span to{' '}
-                          <strong className="text-signal">{result.maxPermissibleSpan} m</strong> with Max Versine{' '}
-                          <strong className="text-signal">{result.maxScheduleVersine} mm</strong> per RDSO Employment Schedule.
-                        </p>
-                      </div>
-
-                      {/* Span Selector */}
-                      <div>
-                        <div className="flex items-center justify-between">
-                          <label className="text-[11px] font-semibold uppercase text-muted-foreground">
-                            2. OHE Span Length (m)
-                          </label>
-                          {span > result.maxPermissibleSpan && (
-                            <button
-                              type="button"
-                              onClick={() => setSpan(result.maxPermissibleSpan)}
-                              className="font-mono text-[10px] text-destructive underline hover:text-destructive/80 font-bold"
-                            >
-                              Reset to Schedule Max ({result.maxPermissibleSpan}m)
-                            </button>
-                          )}
-                        </div>
-                        <Select value={String(span)} onValueChange={(val) => setSpan(parseFloat(val))}>
-                          <SelectTrigger className="mt-1.5 h-8 border-border bg-panel-deep font-mono text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {spans.map((s) => (
-                              <SelectItem
-                                key={s}
-                                value={String(s)}
-                                className={`font-mono text-xs ${s > result.maxPermissibleSpan ? 'text-destructive' : ''}`}
-                              >
-                                {s.toFixed(1)} m span {s === result.maxPermissibleSpan ? '★ (Schedule Max)' : s > result.maxPermissibleSpan ? '⚠️ (Exceeds Max!)' : ''}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {span > result.maxPermissibleSpan && (
-                          <div className="mt-1.5 flex items-start gap-1 rounded bg-destructive/10 border border-destructive/30 p-1.5 text-[10px] text-destructive">
-                            <AlertTriangle className="size-3.5 shrink-0 mt-0.5" />
-                            <span>Warning: Selected span ({span}m) exceeds RDSO maximum permissible span of {result.maxPermissibleSpan}m for R={radius}m.</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Dynamic Versine Readout */}
-                      <div className="flex items-center justify-between rounded bg-panel-deep px-3 py-2 border border-border">
-                        <span className="font-mono text-[10px] uppercase text-muted-foreground">
-                          Versine: S² / (8 × R) × 1000
-                        </span>
-                        <span className="font-mono text-xs font-bold text-signal">
-                          {result.versine.toFixed(1)} mm
-                        </span>
-                      </div>
-
-                      {/* Inside Curve Clearance Auto-enforce Notice */}
-                      {alignment === 'inside' && !result.settingValid && (
-                        <div className="flex items-start gap-2 rounded border border-destructive/40 bg-destructive/10 p-2.5 text-[11px] text-destructive">
-                          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                          <span>
-                            Setting distance ({(implantation ?? result.minSetting).toFixed(2)} m) is below the RDSO minimum (
-                            {result.minSetting.toFixed(2)} m) required for an inside curve of radius {radius} m per PDF 2 Page 37.
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {alignment === 'tangent' && (
-                    <div className="rounded border border-border bg-panel p-3 text-[11px] space-y-2">
-                      <div className="flex items-center justify-between font-mono text-[10px]">
-                        <span className="text-muted-foreground">Track Alignment:</span>
-                        <span className="text-foreground font-bold">Straight Tangent (Radius: ∞)</span>
-                      </div>
-                      <div className="flex items-center justify-between font-mono text-[10px]">
-                        <span className="text-muted-foreground">Permissible OHE Span:</span>
-                        <span className="text-signal font-bold">{result.maxPermissibleSpan} m</span>
-                      </div>
-                      <div className="flex items-center justify-between font-mono text-[10px]">
-                        <span className="text-muted-foreground">Versine / Stagger:</span>
-                        <span className="text-foreground font-semibold">0.0 mm</span>
-                      </div>
-                      <div className="flex items-center justify-between font-mono text-[10px]">
-                        <span className="text-muted-foreground">Schedule Drawing:</span>
-                        <span className="text-primary font-bold">{result.sheetInfo.sheetDrawing} (Row 1)</span>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </section>
 
-              {/* STEP 4: Mast Function Selection (Reactive Core) */}
-              <section className={!step3Done ? 'opacity-40 pointer-events-none' : 'bg-panel-deep/30'}>
+              {/* STEP 5: Mast Function Selection & Foundation Resolution */}
+              <section className={!step4Done ? 'opacity-40 pointer-events-none' : 'bg-panel-deep/30'}>
                 <StepHeader
-                  number="4"
-                  title="Mast Function Selection (Reactive Core)"
-                  subtitle="Dynamically scales Mast Type, Reverse Deflection & FBM Code"
-                  completed={step4Done}
-                  active={step3Done && !step4Done}
+                  number="5"
+                  title="Mast Selection & Foundation Resolution"
+                  subtitle="Dynamically scales Mast Type, Reverse Deflection, FBM Code & Foundation Code"
+                  completed={step5Done}
+                  active={step4Done && !step5Done}
                 />
-                <div className="p-3.5 sm:p-5">
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {roles.map((r) => {
-                      const isSelected = role === r.value;
-                      return (
-                        <button
-                          key={r.value}
-                          type="button"
-                          onClick={() => setRole(r.value)}
-                          className={`flex min-h-[72px] flex-col items-start rounded border p-2.5 text-left transition-all active:scale-[0.98] ${
-                            isSelected
-                              ? 'border-signal bg-signal/10 ring-1 ring-signal shadow-sm'
-                              : 'border-border bg-panel hover:border-border hover:bg-panel-deep'
-                          }`}
-                        >
-                          <div className="flex w-full items-center justify-between">
-                            <span className="font-mono text-xs font-bold text-foreground">{r.label}</span>
-                            {isSelected && <Check className="size-3 text-signal" />}
-                          </div>
-                          <span className="mt-0.5 text-[10px] font-medium text-signal">{r.title}</span>
-                          <span className="mt-1 line-clamp-2 text-[9px] leading-tight text-muted-foreground">
-                            {r.detail}
-                          </span>
-                        </button>
-                      );
-                    })}
+                <div className="p-3.5 sm:p-5 space-y-3.5">
+                  {/* 1. Mast Role Selection Grid */}
+                  <div>
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                      1. Mast Function (Role)
+                    </label>
+                    <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {roles.map((r) => {
+                        const isSelected = role === r.value;
+                        const roleRes = result.allMastFunctions.find((m) => m.role === r.value);
+                        return (
+                          <button
+                            key={r.value}
+                            type="button"
+                            onClick={() => {
+                              setRole(r.value);
+                              if (roleRes) {
+                                setSelectedFoundationType(roleRes.recommendedTypeKey);
+                              }
+                            }}
+                            className={`flex min-h-[76px] flex-col items-start rounded-lg border p-2.5 text-left transition-all active:scale-[0.98] ${
+                              isSelected
+                                ? 'border-signal bg-signal/15 ring-2 ring-signal shadow-sm'
+                                : 'border-border bg-panel hover:border-border hover:bg-panel-deep'
+                            }`}
+                          >
+                            <div className="flex w-full items-center justify-between">
+                              <span className="font-mono text-xs font-bold text-foreground">{r.label}</span>
+                              {isSelected && <Check className="size-3.5 text-signal stroke-[3]" />}
+                            </div>
+                            <span className="mt-0.5 text-[10px] font-semibold text-signal">{r.title}</span>
+                            <span className="mt-1 line-clamp-2 text-[9px] leading-tight text-muted-foreground">
+                              {r.detail}
+                            </span>
+                            {roleRes && (
+                              <div className="mt-1 flex w-full items-center justify-between text-[9px] font-mono text-muted-foreground border-t border-border/50 pt-1">
+                                <span className="text-primary font-bold">FBM {roleRes.fbmCode}</span>
+                                <span className="text-foreground">{roleRes.recommendedFdn}</span>
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
-                  {/* B-Series Mast Size Selector & RDSO Schedule Auto Resolution */}
-                  <div className="mt-3 rounded border border-border/80 bg-panel p-3 space-y-2">
+                  {/* 2. B-Series Mast Section Selector */}
+                  <div className="rounded border border-border/80 bg-panel p-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] uppercase font-bold text-muted-foreground">
                         B-Series Mast Section (PDF 1 Employment Schedule Columns)
@@ -1613,21 +1738,119 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                         );
                       })}
                     </div>
-
-                    <div className="flex flex-wrap items-center justify-between gap-1 text-[10px] text-muted-foreground pt-1 border-t border-border/50">
-                      <span>
-                        FBM Code: <strong className="text-primary font-bold">{result.fbmCode}</strong>
-                      </span>
-                      <span>
-                        Reverse Deflection: <strong className="text-signal font-bold">{result.deflectionDirection}</strong>
-                      </span>
-                      <span>
-                        Embedment: <strong className="text-foreground font-mono">{result.mastLengthEmbedded}m</strong>
-                      </span>
-                    </div>
                   </div>
 
-                  {/* All-Mast Function Resolution & Comparison Table (All 6 Roles Side-by-Side) */}
+                  {/* 3. PROMINENT ACTIVE MATCHED MAST & FOUNDATION CARD */}
+                  {(() => {
+                    const activeRoleRes =
+                      result.allMastFunctions.find((m) => m.role === role) ?? result.allMastFunctions[0];
+                    const activeFdn =
+                      result.foundations[selectedFoundationType] ?? result.foundations.bgType;
+                    return (
+                      <div className="rounded-xl border-2 border-signal/70 bg-panel-deep p-3.5 sm:p-4 space-y-3 shadow-md shadow-signal/10 animate-in fade-in duration-200">
+                        {/* Header */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/80 pb-2.5">
+                          <div className="flex items-center gap-2">
+                            <span className="size-2.5 rounded-full bg-signal animate-pulse" />
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-mono text-sm font-black text-signal">
+                                  {activeRoleRes?.roleLabel ?? 'N / NACC'}
+                                </span>
+                                <span className="text-xs font-bold text-foreground">
+                                  ({activeRoleRes?.roleTitle ?? 'Normal Mast'})
+                                </span>
+                              </div>
+                              <span className="font-mono text-[11px] text-foreground font-semibold">
+                                {activeRoleRes?.mastSection}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end">
+                            <Badge variant="outline" className="border-signal bg-signal/20 font-mono text-xs font-bold text-signal px-2 py-0.5">
+                              FBM Code {activeRoleRes?.fbmCode}
+                            </Badge>
+                            <span className="mt-0.5 font-mono text-[10px] text-muted-foreground">
+                              Reverse Defl: <strong className="text-signal">{activeRoleRes?.deflectionDirection}</strong>
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Mast Mechanics Readout */}
+                        <div className="grid grid-cols-2 gap-2 rounded-lg bg-panel p-2.5 font-mono text-[10px] border border-border">
+                          <div>
+                            <span className="text-muted-foreground block text-[9px] uppercase">Direct Axial Load:</span>
+                            <span className="font-bold text-foreground text-xs">{activeRoleRes?.fbmVerticalLoad.toLocaleString()} kg</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground block text-[9px] uppercase">Overturning Bending Moment:</span>
+                            <span className="font-bold text-signal text-xs">{activeRoleRes?.fbmMoment.toLocaleString()} kg·m</span>
+                          </div>
+                        </div>
+
+                        {/* Matched Foundation Highlights */}
+                        <div className="rounded-lg border border-signal/50 bg-signal/10 p-3 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-signal flex items-center gap-1.5">
+                              <Box className="size-3.5" /> Matched RDSO Foundation
+                            </span>
+                            <Badge variant="outline" className="border-signal/50 bg-signal/20 font-mono text-[10px] text-signal font-bold">
+                              {result.recommendedFoundation.soilPressure} (Image 2)
+                            </Badge>
+                          </div>
+
+                          <div className="flex flex-wrap items-baseline gap-2">
+                            <span className="font-mono text-xl sm:text-2xl font-black text-foreground">
+                              {result.recommendedFoundation.reference}
+                            </span>
+                            <span className="font-mono text-xs font-bold text-signal">
+                              {result.recommendedFoundation.typeName}
+                            </span>
+                          </div>
+
+                          <p className="text-[10.5px] leading-relaxed text-muted-foreground">
+                            {result.recommendedFoundation.reason}
+                          </p>
+
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1 border-t border-signal/20 font-mono text-[10px]">
+                            <div className="rounded bg-panel/70 p-1.5 text-center">
+                              <span className="block text-[8.5px] text-muted-foreground uppercase">Dimensions</span>
+                              <span className="font-bold text-foreground">{activeFdn.dimText}</span>
+                            </div>
+                            <div className="rounded bg-panel/70 p-1.5 text-center">
+                              <span className="block text-[8.5px] text-muted-foreground uppercase">Base Concrete</span>
+                              <span className="font-bold text-foreground">{activeFdn.baseVolume.toFixed(2)} m³</span>
+                            </div>
+                            <div className="rounded bg-panel/70 p-1.5 text-center">
+                              <span className="block text-[8.5px] text-muted-foreground uppercase">Muff Collar</span>
+                              <span className="font-bold text-foreground">{activeFdn.muffVolume.toFixed(2)} m³</span>
+                            </div>
+                            <div className="rounded bg-panel/70 p-1.5 text-center">
+                              <span className="block text-[8.5px] text-muted-foreground uppercase">Total Volume</span>
+                              <span className="font-bold text-signal font-black">{activeFdn.totalVolume.toFixed(2)} m³</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Mobile 3D Action Switch */}
+                        <div className="flex items-center justify-between pt-1">
+                          <span className="flex items-center gap-1.5 font-mono text-[10px] text-success">
+                            <CheckCircle2 className="size-3.5 text-success" />
+                            3D Digital Twin & Foundation Geometry Synced
+                          </span>
+                          <Button
+                            size="sm"
+                            onClick={() => setMobileTab('viewport')}
+                            className="h-7 text-xs bg-primary text-primary-foreground lg:hidden font-mono"
+                          >
+                            <Box className="size-3.5 mr-1" /> View in 3D
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* 4. All 6 Mast Roles Resolution Matrix Table */}
                   <div className="mt-3 rounded border border-border/80 bg-panel overflow-hidden space-y-0 shadow-sm">
                     <div className="flex flex-wrap items-center justify-between gap-1.5 border-b border-border bg-panel-deep px-3 py-2">
                       <div className="flex items-center gap-1.5 font-bold text-xs text-foreground">
@@ -1656,7 +1879,7 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                               <div className="min-w-0">
                                 <div className="flex items-center gap-1.5">
                                   {isCurrent && <span className="size-2 rounded-full bg-signal animate-pulse" />}
-                                  <span className={`font-mono text-xs font-bold ${isCurrent ? 'text-signal' : 'text-foreground'}`}>
+                                  <span className={`font-mono text-xs font-bold ${isCurrent ? "text-signal" : "text-foreground"}`}>
                                     {mf.roleLabel}
                                   </span>
                                   <span className="text-[10px] text-muted-foreground truncate max-w-[130px]">{mf.roleTitle}</span>
@@ -1700,14 +1923,14 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                                 setSelectedFoundationType(mf.recommendedTypeKey);
                                 setMobileTab('viewport');
                               }}
-                              className={`mt-2 w-full h-8 font-mono text-xs font-bold justify-center ${
+                              className={`mt-2.5 w-full font-mono text-xs ${
                                 isCurrent
                                   ? 'bg-signal text-signal-foreground hover:bg-signal/90 shadow-sm'
                                   : 'border border-border bg-panel text-foreground hover:bg-panel-deep'
                               }`}
                             >
                               <Box className="size-3.5 mr-1.5" />
-                              {isCurrent ? 'Active in 3D Twin' : `Select & Inspect in 3D`}
+                              {isCurrent ? "Active in 3D Twin" : "Select & Inspect in 3D"}
                             </Button>
                           </div>
                         );
@@ -2104,7 +2327,7 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                       </p>
 
                       {/* Step completion pills */}
-                      <div className="mt-3 grid grid-cols-2 gap-1.5 text-left font-mono text-[9px] sm:gap-2 sm:text-[10px]">
+                      <div className="mt-3 grid grid-cols-2 gap-1.5 text-left font-mono text-[9px] sm:gap-2 sm:text-[10px] sm:grid-cols-3">
                         <div
                           className={`flex items-center gap-1 rounded border px-2 py-1 ${
                             step1Done ? 'border-success/40 bg-success/10 text-success' : 'border-border bg-panel text-muted-foreground'
@@ -2120,7 +2343,7 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                           }`}
                         >
                           <CircleDot className="size-2.5" />
-                          <span className="truncate">2. Imp: {implantation ? `${implantation.toFixed(2)}m` : 'Pending'}</span>
+                          <span className="truncate">2. Align: {alignment ? alignment : 'Pending'}</span>
                         </div>
 
                         <div
@@ -2129,7 +2352,7 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                           }`}
                         >
                           <CircleDot className="size-2.5" />
-                          <span className="truncate">3. Align: {alignment ? alignment : 'Pending'}</span>
+                          <span className="truncate">3. Imp: {implantation ? `${implantation.toFixed(2)}m` : 'Pending'}</span>
                         </div>
 
                         <div
@@ -2138,7 +2361,16 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                           }`}
                         >
                           <CircleDot className="size-2.5" />
-                          <span className="truncate">4. Mast: {role ? role : 'Pending'}</span>
+                          <span className="truncate">4. Cess: C={result.superBlock.stepC.toFixed(2)}m</span>
+                        </div>
+
+                        <div
+                          className={`col-span-2 sm:col-span-1 flex items-center gap-1 rounded border px-2 py-1 ${
+                            step5Done ? 'border-success/40 bg-success/10 text-success' : 'border-border bg-panel text-muted-foreground'
+                          }`}
+                        >
+                          <CircleDot className="size-2.5" />
+                          <span className="truncate">5. Mast: {role ? role : 'Pending'}</span>
                         </div>
                       </div>
 
@@ -3012,7 +3244,7 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
             <div className="relative">
               <SlidersHorizontal className="size-5" />
               <span className="absolute -top-1 -right-2 flex size-3.5 items-center justify-center rounded-full bg-signal text-[8px] font-bold text-signal-foreground">
-                {[step1Done, step2Done, step3Done, step4Done].filter(Boolean).length}
+                {[step1Done, step2Done, step3Done, step4Done, step5Done].filter(Boolean).length}
               </span>
             </div>
             <span className="text-[10px] uppercase font-bold tracking-tight">Wizard</span>
