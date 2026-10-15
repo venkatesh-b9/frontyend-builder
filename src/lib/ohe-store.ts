@@ -287,13 +287,13 @@ export const useOheStore = create<OheState>((set) => ({
     } else if (presetName === 'standard-105') {
       set({
         wind: 105,
-        implantationMode: 'standard',
-        implantation: 2.80,
-        stepLevel: 0.40,
+        implantationMode: 'custom',
+        implantation: 3.50, // Tier 2 (2.80 - 3.80 m) per RDSO Sheet 5 & user Image 1
+        stepLevel: 0.50,
         shoulderWidth: 0.60,
         alignment: 'tangent',
         radius: 0,
-        span: 72.0,
+        span: 67.5, // 67.5 m max span for Sheet 5 Tier 2
         role: 'N/NACC',
         selectedFoundationType: 'bType',
         mastPreference: 'auto',

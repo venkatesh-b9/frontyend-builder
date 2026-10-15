@@ -239,9 +239,9 @@ function QuickGuideModal({
                   onLoadPreset('standard-105');
                   onClose();
                 }}
-                className="h-7 text-[10px] font-mono border-border bg-panel hover:border-primary/50"
+                className="h-7 text-[10px] font-mono border-primary/50 bg-primary/10 text-primary font-bold hover:bg-primary/20"
               >
-                ⚡ Try Standard 105 kgf/m²
+                ⚡ RDSO 105 kgf/m² (Sheet 5 / Code 161)
               </Button>
               <Button
                 variant="outline"
@@ -763,9 +763,10 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
             variant="outline"
             size="sm"
             onClick={() => loadPreset('standard-105')}
-            className="h-7 shrink-0 border-border bg-panel-deep px-2 font-mono text-[10px] hover:border-signal/50"
+            className="h-7 shrink-0 border-primary/50 bg-primary/10 px-2 font-mono text-[10px] text-primary font-bold hover:bg-primary/20"
+            title="Load Wind 105 kgf/m², Implantation 3.5m (Tier 2), Normal Mast B-175, FBM 161 (B-7 / BG-7)"
           >
-            <Wind className="size-3 text-muted-foreground mr-1" /> 105kg Std
+            <Wind className="size-3 text-primary mr-1" /> RDSO 105 (Img 1)
           </Button>
           <Button
             variant="outline"
@@ -2158,10 +2159,12 @@ ${result.superBlock.required ? `- Extra Embedment in Super Block: ${result.super
                         implantationMode,
                         implantation,
                         stepLevel,
+                        shoulderWidth,
                         alignment,
                         radius,
                         span,
                         role,
+                        mastPreference,
                       }}
                       result={result}
                       view={sceneView}

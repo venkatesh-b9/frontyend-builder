@@ -616,21 +616,14 @@ export function resolveRoleParameters(
   radius: number,
   mastPreference?: 'auto' | 'B-150' | 'B-175' | 'B-200' | 'B-225' | 'B-250' | undefined
 ): RoleParameters {
-  let mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-  let mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-  let mastType: 'rolled' | 'b-type' = 'b-type'; // STRICTLY B-TYPE ONLY (NO K-TYPE / NO LATTICE)
-  let reverseDeflection = 30;
-  let deflectionDirection = '+30 mm (Away from track)';
-  let fbmCode = 168;
-
   const isBwa = role === 'OLA/BWA';
   const isInside = alignment === 'inside';
-  const isOutside = alignment === 'outside';
-  const isCurve = alignment !== 'tangent';
 
-  // 1. REVERSE DEFLECTION DIRECTION RULE:
-  // Per RDSO Note 7: Tangent and Outside Curve masts deflect away from track (+30 mm)
+  // 1. REVERSE DEFLECTION DIRECTION RULE (RDSO Employment Schedule Note 7):
+  // Tangent and Outside Curve masts deflect away from track (+30 mm)
   // Inside Curve masts and all BWA anchor masts deflect towards track (-30 mm)
+  let reverseDeflection = 30;
+  let deflectionDirection = '+30 mm (Away from track)';
   if (isInside) {
     reverseDeflection = -30;
     deflectionDirection = '-30 mm (Towards track)';
@@ -642,578 +635,471 @@ export function resolveRoleParameters(
     deflectionDirection = '+30 mm (Away from track)';
   }
 
-  // 2. WIND-SPECIFIC RDSO EMPLOYMENT SCHEDULE MATRICES (PDF 1 Sheets 1 to 18)
-  if (wind === 178) {
+  // 2. COMPLETE 18-SHEET RDSO EMPLOYMENT SCHEDULE LOOKUP (TI/DRG/CIV/ES/RDSO/00001/23/0 Sheets 1 to 18)
+  let baseMast = 'B-200';
+  let baseCode = 168;
+
+  if (alignment === 'tangent') {
     // ------------------------------------------------------------------------
-    // WIND 178 kgf/m² (IMAGE 1 / SHEET 14) - RDSO 50 m/s SEVERE ZONE
+    // TANGENT TRACK (ROW 1 OF OUTSIDE CURVED TRACK SCHEDULE TABLE)
     // ------------------------------------------------------------------------
-    if (alignment === 'tangent') {
+    if (wind === 73) {
+      // Sheets 1, 2, 3
       if (role === 'N/NACC') {
-        mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-        fbmCode = 168;
+        baseMast = 'B-175';
+        baseCode = implantationTier === 'Tier 3' ? 147 : 135; // B-150 is 135/147, B-175 is 154
+        if (mastPreference === 'B-175') baseCode = 154;
       } else if (role === 'ACC') {
-        mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-        fbmCode = 173;
+        baseMast = 'B-175';
+        baseCode = 154;
       } else if (role === 'ACA') {
-        mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-        fbmCode = 275;
-      } else if (role === 'OLC' || role === 'OLI') {
-        mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-        fbmCode = 185;
+        baseMast = 'B-175';
+        baseCode = 254;
+      } else if (role === 'OLI' || role === 'OLC') {
+        baseMast = 'B-175';
+        baseCode = implantationTier === 'Tier 3' ? 161 : 154;
       } else if (isBwa) {
-        mastSection = 'B-225 Heavy Fabricated Battened Mast (225 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-225)';
-        fbmCode = 395;
+        baseMast = 'B-225';
+        baseCode = 389;
       }
-    } else if (isOutside) {
-      if (isBwa) {
-        if (radius <= 400) {
-          mastSection = 'B-250 Heavy Fabricated Battened Mast (250 mm)';
-          mastSeries = 'B-Series Fabricated Battened Mast (B-250)';
-          fbmCode = 399;
-        } else if (radius <= 1900) {
-          mastSection = 'B-225 Heavy Fabricated Battened Mast (225 mm)';
-          mastSeries = 'B-Series Fabricated Battened Mast (B-225)';
-          fbmCode = 399;
-        } else {
-          mastSection = 'B-225 Heavy Fabricated Battened Mast (225 mm)';
-          mastSeries = 'B-Series Fabricated Battened Mast (B-225)';
-          fbmCode = 395;
+    } else if (wind === 105) {
+      // Sheets 4, 5, 6
+      if (implantationTier === 'Tier 1') {
+        // Sheet 4
+        if (role === 'N/NACC') {
+          baseMast = 'B-175';
+          baseCode = 154;
+        } else if (role === 'ACC') {
+          baseMast = 'B-175';
+          baseCode = 154;
+        } else if (role === 'ACA') {
+          baseMast = 'B-175';
+          baseCode = 168;
+        } else if (role === 'OLI' || role === 'OLC') {
+          baseMast = 'B-175';
+          baseCode = 168;
+        } else if (isBwa) {
+          baseMast = 'B-225';
+          baseCode = 389;
         }
-      } else if (role === 'N/NACC') {
-        if (radius <= 400) {
-          mastSection = 'B-225 Heavy Fabricated Battened Mast (225 mm)';
-          mastSeries = 'B-Series Fabricated Battened Mast (B-225)';
-          fbmCode = 193;
-        } else if (radius <= 700) {
-          mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-          mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-          fbmCode = 173;
-        } else {
-          mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-          mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-          fbmCode = 168;
-        }
-      } else if (role === 'ACC') {
-        if (radius <= 400) {
-          mastSection = 'B-225 Heavy Fabricated Battened Mast (225 mm)';
-          mastSeries = 'B-Series Fabricated Battened Mast (B-225)';
-          fbmCode = 193;
-        } else if (radius <= 550) {
-          mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-          mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-          fbmCode = 185;
-        } else {
-          mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-          mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-          fbmCode = 173;
-        }
-      } else if (role === 'ACA') {
-        if (radius <= 850) {
-          mastSection = 'B-225 Heavy Fabricated Battened Mast (225 mm)';
-          mastSeries = 'B-Series Fabricated Battened Mast (B-225)';
-          fbmCode = 199;
-        } else {
-          mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-          mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-          fbmCode = 275;
+      } else if (implantationTier === 'Tier 2') {
+        // Sheet 5 (USER REFERENCE IMAGE 1 - TI/DRG/CIV/ES/RDSO/00001/23/0 SHEET-5)
+        if (role === 'N/NACC') {
+          baseMast = 'B-175';
+          baseCode = 161; // RDSO Sheet 5 Row 1 B-175 Column: FBM 161
+        } else if (role === 'ACC') {
+          baseMast = 'B-175';
+          baseCode = 154;
+        } else if (role === 'ACA') {
+          baseMast = 'B-175';
+          baseCode = 168;
+        } else if (role === 'OLI' || role === 'OLC') {
+          baseMast = 'B-175';
+          baseCode = 168;
+        } else if (isBwa) {
+          baseMast = 'B-225';
+          baseCode = 389;
         }
       } else {
-        // OLC / OLI
-        if (radius <= 400) {
-          mastSection = 'B-250 Heavy Fabricated Battened Mast (250 mm)';
-          mastSeries = 'B-Series Fabricated Battened Mast (B-250)';
-          fbmCode = 199;
-        } else if (radius <= 700) {
-          mastSection = 'B-225 Heavy Fabricated Battened Mast (225 mm)';
-          mastSeries = 'B-Series Fabricated Battened Mast (B-225)';
-          fbmCode = 199;
-        } else if (radius <= 1900) {
-          mastSection = 'B-225 Heavy Fabricated Battened Mast (225 mm)';
-          mastSeries = 'B-Series Fabricated Battened Mast (B-225)';
-          fbmCode = 193;
-        } else {
-          mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-          mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-          fbmCode = 185;
+        // Sheet 6 (Tier 3)
+        if (role === 'N/NACC') {
+          baseMast = 'B-175';
+          baseCode = 154;
+        } else if (role === 'ACC') {
+          baseMast = 'B-175';
+          baseCode = 154;
+        } else if (role === 'ACA') {
+          baseMast = 'B-175';
+          baseCode = 260;
+        } else if (role === 'OLI' || role === 'OLC') {
+          baseMast = 'B-175';
+          baseCode = 168;
+        } else if (isBwa) {
+          baseMast = 'B-225';
+          baseCode = 389;
         }
+      }
+    } else if (wind === 136) {
+      // Sheets 7, 8, 9
+      if (role === 'N/NACC') {
+        baseMast = 'B-175';
+        baseCode = implantationTier === 'Tier 1' ? 154 : 161;
+      } else if (role === 'ACC') {
+        baseMast = 'B-200';
+        baseCode = 173;
+      } else if (role === 'ACA') {
+        baseMast = 'B-200';
+        baseCode = 270;
+      } else if (role === 'OLI' || role === 'OLC') {
+        baseMast = 'B-200';
+        baseCode = implantationTier === 'Tier 3' ? 185 : 178;
+      } else if (isBwa) {
+        baseMast = 'B-225';
+        baseCode = 389;
+      }
+    } else if (wind === 155) {
+      // Sheets 10, 11, 12
+      if (role === 'N/NACC') {
+        baseMast = 'B-175';
+        baseCode = implantationTier === 'Tier 3' ? 168 : 161;
+      } else if (role === 'ACC') {
+        baseMast = implantationTier === 'Tier 3' ? 'B-200' : 'B-175';
+        baseCode = implantationTier === 'Tier 3' ? 173 : 161;
+      } else if (role === 'ACA') {
+        baseMast = 'B-200';
+        baseCode = 270;
+      } else if (role === 'OLI' || role === 'OLC') {
+        baseMast = 'B-200';
+        baseCode = implantationTier === 'Tier 3' ? 185 : 178;
+      } else if (isBwa) {
+        baseMast = 'B-225';
+        baseCode = implantationTier === 'Tier 3' ? 395 : 389;
+      }
+    } else if (wind === 178) {
+      // Sheets 13, 14, 15 (USER PREVIOUS REFERENCE IMAGE 1 - SHEET 14)
+      if (role === 'N/NACC') {
+        baseMast = 'B-200';
+        baseCode = 168; // Sheet 14 Tangent Normal Mast B-200: 168
+      } else if (role === 'ACC') {
+        baseMast = 'B-200';
+        baseCode = 173; // Sheet 14 ACC: 173
+      } else if (role === 'ACA') {
+        baseMast = 'B-200';
+        baseCode = 275; // Sheet 14 ACA: 275
+      } else if (role === 'OLI' || role === 'OLC') {
+        baseMast = 'B-200';
+        baseCode = 185; // Sheet 14 OLI / OLC: 185
+      } else if (isBwa) {
+        baseMast = 'B-225';
+        baseCode = implantationTier === 'Tier 1' ? 389 : 395; // Sheet 14 OLA: 395
       }
     } else {
-      // Inside Curve (Image 1 Bottom Table)
-      if (isBwa) {
-        if (radius <= 300) {
-          mastSection = 'B-225 Heavy Fabricated Battened Mast (225 mm)';
-          mastSeries = 'B-Series Fabricated Battened Mast (B-225)';
-          fbmCode = 399;
-        } else if (radius <= 400) {
-          mastSection = 'B-225 Heavy Fabricated Battened Mast (225 mm)';
-          mastSeries = 'B-Series Fabricated Battened Mast (B-225)';
-          fbmCode = 395;
-        } else if (radius <= 550) {
-          mastSection = 'B-225 Heavy Fabricated Battened Mast (225 mm)';
-          mastSeries = 'B-Series Fabricated Battened Mast (B-225)';
-          fbmCode = 389;
-        } else if (radius <= 1150) {
-          mastSection = 'B-225 Heavy Fabricated Battened Mast (225 mm)';
-          mastSeries = 'B-Series Fabricated Battened Mast (B-225)';
-          fbmCode = 399;
-        } else {
-          mastSection = 'B-225 Heavy Fabricated Battened Mast (225 mm)';
-          mastSeries = 'B-Series Fabricated Battened Mast (B-225)';
-          fbmCode = 389;
-        }
-      } else if (role === 'N/NACC') {
-        if (radius <= 300) {
-          mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-          mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-          fbmCode = 173;
-        } else if (radius <= 550) {
-          mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-          mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-          fbmCode = 168;
-        } else {
-          mastSection = 'B-175 Fabricated Battened Mast (175 mm)';
-          mastSeries = 'B-Series Fabricated Battened Mast (B-175)';
-          fbmCode = 161;
-        }
+      // Wind 216 (Sheets 16, 17, 18)
+      if (role === 'N/NACC') {
+        baseMast = 'B-200';
+        baseCode = 178;
       } else if (role === 'ACC') {
-        if (radius <= 400) {
-          mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-          mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-          fbmCode = 185;
-        } else if (radius <= 550) {
-          mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-          mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-          fbmCode = 178;
-        } else {
-          mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-          mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-          fbmCode = 173;
-        }
+        baseMast = 'B-200';
+        baseCode = 185;
       } else if (role === 'ACA') {
-        if (radius <= 400) {
-          mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-          mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-          fbmCode = 275;
-        } else if (radius <= 850) {
-          mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-          mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-          fbmCode = 270;
-        } else {
-          mastSection = 'B-175 Fabricated Battened Mast (175 mm)';
-          mastSeries = 'B-Series Fabricated Battened Mast (B-175)';
-          fbmCode = 265;
-        }
-      } else {
-        // OLC / OLI
-        if (radius <= 550) {
-          mastSection = 'B-225 Heavy Fabricated Battened Mast (225 mm)';
-          mastSeries = 'B-Series Fabricated Battened Mast (B-225)';
-          fbmCode = 199;
-        } else if (radius <= 1150) {
-          mastSection = 'B-225 Heavy Fabricated Battened Mast (225 mm)';
-          mastSeries = 'B-Series Fabricated Battened Mast (B-225)';
-          fbmCode = 193;
-        } else {
-          mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-          mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-          fbmCode = 185;
-        }
+        baseMast = 'B-225';
+        baseCode = 193;
+      } else if (role === 'OLI' || role === 'OLC') {
+        baseMast = 'B-225';
+        baseCode = 193;
+      } else if (isBwa) {
+        baseMast = 'B-225';
+        baseCode = implantationTier === 'Tier 1' ? 395 : 399;
       }
     }
-  } else if (wind === 73) {
+  } else if (alignment === 'outside') {
     // ------------------------------------------------------------------------
-    // WIND 73 kgf/m² (SHEETS 1-3) - RDSO 33 m/s LIGHT ZONE
+    // MAST ON OUTSIDE OF CURVED TRACK (RDSO TOP TABLE ROWS 2+)
     // ------------------------------------------------------------------------
-    if (alignment === 'tangent') {
-      if (role === 'N/NACC') {
-        mastSection = 'B-175 Fabricated Battened Mast (175 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-175)';
-        fbmCode = 135;
-      } else if (role === 'ACC') {
-        mastSection = 'B-175 Fabricated Battened Mast (175 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-175)';
-        fbmCode = 135;
-      } else if (role === 'ACA') {
-        mastSection = 'B-175 Fabricated Battened Mast (175 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-175)';
-        fbmCode = 234;
-      } else if (role === 'OLC' || role === 'OLI') {
-        mastSection = 'B-175 Fabricated Battened Mast (175 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-175)';
-        fbmCode = 140;
-      } else if (isBwa) {
-        mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-        fbmCode = 347;
-      }
-    } else if (isOutside) {
+    const isMild = radius >= 1600;
+    const isMed = radius >= 700 && radius < 1600;
+    const isSharp = radius >= 400 && radius < 700;
+    const isExtraSharp = radius < 400;
+
+    if (wind === 73) {
       if (isBwa) {
-        mastSection = 'B-225 Heavy Fabricated Battened Mast (225 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-225)';
-        fbmCode = radius <= 700 ? 374 : 363;
+        baseMast = isExtraSharp ? 'B-225' : isSharp ? 'B-200' : 'B-175';
+        baseCode = isExtraSharp ? 389 : isSharp ? 374 : 363;
       } else if (role === 'N/NACC') {
-        mastSection = 'B-175 Fabricated Battened Mast (175 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-175)';
-        fbmCode = radius <= 700 ? 147 : 140;
+        baseMast = 'B-175';
+        baseCode = isExtraSharp ? 154 : isSharp ? 147 : 140;
       } else if (role === 'ACC') {
-        mastSection = 'B-175 Fabricated Battened Mast (175 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-175)';
-        fbmCode = radius <= 700 ? 154 : 140;
+        baseMast = 'B-175';
+        baseCode = 140;
       } else if (role === 'ACA') {
-        mastSection = 'B-175 Fabricated Battened Mast (175 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-175)';
-        fbmCode = radius <= 700 ? 254 : 245;
+        baseMast = 'B-175';
+        baseCode = isExtraSharp ? 265 : 260;
       } else {
-        mastSection = 'B-175 Fabricated Battened Mast (175 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-175)';
-        fbmCode = radius <= 700 ? 161 : 147;
+        baseMast = 'B-175';
+        baseCode = isExtraSharp ? 154 : isSharp ? 147 : 140;
+      }
+    } else if (wind === 105) {
+      if (implantationTier === 'Tier 2') {
+        // Sheet 5 Outside Curve
+        if (isBwa) {
+          baseMast = 'B-225';
+          baseCode = isExtraSharp ? 399 : isMild ? 389 : 395;
+        } else if (role === 'N/NACC') {
+          baseMast = 'B-175';
+          baseCode = 154;
+        } else if (role === 'ACC') {
+          baseMast = isExtraSharp ? 'B-200' : 'B-175';
+          baseCode = isExtraSharp ? 173 : isMild ? 161 : 168;
+        } else if (role === 'ACA') {
+          baseMast = isExtraSharp ? 'B-200' : 'B-175';
+          baseCode = isExtraSharp ? 270 : isMild ? 260 : 265;
+        } else {
+          baseMast = isExtraSharp ? 'B-200' : 'B-175';
+          baseCode = isExtraSharp ? 173 : isMild ? 161 : 168;
+        }
+      } else {
+        if (isBwa) {
+          baseMast = 'B-225';
+          baseCode = isExtraSharp ? 399 : 389;
+        } else if (role === 'N/NACC') {
+          baseMast = 'B-175';
+          baseCode = isSharp || isExtraSharp ? 154 : 147;
+        } else if (role === 'ACC') {
+          baseMast = isExtraSharp ? 'B-200' : 'B-175';
+          baseCode = isExtraSharp ? 173 : isSharp ? 168 : 161;
+        } else if (role === 'ACA') {
+          baseMast = isExtraSharp ? 'B-200' : 'B-175';
+          baseCode = isExtraSharp ? 270 : 265;
+        } else {
+          baseMast = 'B-175';
+          baseCode = isExtraSharp ? 168 : 161;
+        }
+      }
+    } else if (wind === 136) {
+      if (isBwa) {
+        baseMast = 'B-225';
+        baseCode = isExtraSharp ? 399 : isMed ? 395 : 389;
+      } else if (role === 'N/NACC') {
+        baseMast = isSharp || isExtraSharp ? 'B-200' : 'B-175';
+        baseCode = isExtraSharp ? 173 : isSharp ? 168 : 161;
+      } else if (role === 'ACC') {
+        baseMast = 'B-200';
+        baseCode = isExtraSharp ? 185 : isSharp ? 178 : 173;
+      } else if (role === 'ACA') {
+        baseMast = 'B-200';
+        baseCode = isSharp || isExtraSharp ? 275 : 270;
+      } else {
+        baseMast = 'B-200';
+        baseCode = isSharp || isExtraSharp ? 185 : 178;
+      }
+    } else if (wind === 155) {
+      if (isBwa) {
+        baseMast = 'B-225';
+        baseCode = isExtraSharp ? 399 : 395;
+      } else if (role === 'N/NACC') {
+        baseMast = isSharp || isExtraSharp ? 'B-200' : 'B-175';
+        baseCode = isExtraSharp ? 173 : isSharp ? 168 : 161;
+      } else if (role === 'ACC') {
+        baseMast = isSharp || isExtraSharp ? 'B-200' : 'B-175';
+        baseCode = isExtraSharp ? 178 : isSharp ? 173 : 168;
+      } else if (role === 'ACA') {
+        baseMast = 'B-200';
+        baseCode = 275;
+      } else {
+        baseMast = 'B-200';
+        baseCode = 185;
+      }
+    } else if (wind === 178) {
+      if (isBwa) {
+        baseMast = 'B-225';
+        baseCode = 399;
+      } else if (role === 'N/NACC') {
+        baseMast = 'B-200';
+        baseCode = isExtraSharp || isSharp ? 173 : 168;
+      } else if (role === 'ACC') {
+        baseMast = 'B-200';
+        baseCode = isExtraSharp ? 185 : isSharp ? 178 : 173;
+      } else if (role === 'ACA') {
+        baseMast = 'B-200';
+        baseCode = 275;
+      } else {
+        baseMast = isExtraSharp ? 'B-225' : 'B-200';
+        baseCode = isExtraSharp ? 193 : 185;
       }
     } else {
-      // Inside Curve
+      // Wind 216
       if (isBwa) {
-        mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-        fbmCode = radius <= 700 ? 363 : 347;
+        baseMast = isSharp || isExtraSharp ? 'B-250' : 'B-225';
+        baseCode = 399;
       } else if (role === 'N/NACC') {
-        mastSection = 'B-175 Fabricated Battened Mast (175 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-175)';
-        fbmCode = radius <= 700 ? 135 : 125;
+        baseMast = 'B-200';
+        baseCode = isSharp || isExtraSharp ? 185 : 178;
       } else if (role === 'ACC') {
-        mastSection = 'B-175 Fabricated Battened Mast (175 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-175)';
-        fbmCode = radius <= 700 ? 147 : 135;
+        baseMast = 'B-225';
+        baseCode = isExtraSharp ? 199 : 193;
       } else if (role === 'ACA') {
-        mastSection = 'B-175 Fabricated Battened Mast (175 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-175)';
-        fbmCode = radius <= 700 ? 245 : 234;
+        baseMast = isSharp || isExtraSharp ? 'B-250' : 'B-225';
+        baseCode = isSharp || isExtraSharp ? 275 : 199;
       } else {
-        mastSection = 'B-175 Fabricated Battened Mast (175 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-175)';
-        fbmCode = radius <= 700 ? 154 : 140;
-      }
-    }
-  } else if (wind === 105) {
-    // ------------------------------------------------------------------------
-    // WIND 105 kgf/m² (SHEETS 4-6) - RDSO 39 m/s MEDIUM ZONE
-    // ------------------------------------------------------------------------
-    if (alignment === 'tangent') {
-      if (role === 'N/NACC') {
-        mastSection = 'B-175 Fabricated Battened Mast (175 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-175)';
-        fbmCode = 140;
-      } else if (role === 'ACC') {
-        mastSection = 'B-175 Fabricated Battened Mast (175 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-175)';
-        fbmCode = 147;
-      } else if (role === 'ACA') {
-        mastSection = 'B-175 Fabricated Battened Mast (175 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-175)';
-        fbmCode = 250;
-      } else if (role === 'OLC' || role === 'OLI') {
-        mastSection = 'B-175 Fabricated Battened Mast (175 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-175)';
-        fbmCode = 154;
-      } else if (isBwa) {
-        mastSection = 'B-225 Heavy Fabricated Battened Mast (225 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-225)';
-        fbmCode = 363;
-      }
-    } else if (isOutside) {
-      if (isBwa) {
-        mastSection = 'B-225 Heavy Fabricated Battened Mast (225 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-225)';
-        fbmCode = radius <= 700 ? 389 : 374;
-      } else if (role === 'N/NACC') {
-        mastSection = 'B-175 Fabricated Battened Mast (175 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-175)';
-        fbmCode = radius <= 700 ? 154 : 147;
-      } else if (role === 'ACC') {
-        mastSection = 'B-175 Fabricated Battened Mast (175 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-175)';
-        fbmCode = radius <= 700 ? 161 : 154;
-      } else if (role === 'ACA') {
-        mastSection = 'B-175 Fabricated Battened Mast (175 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-175)';
-        fbmCode = radius <= 700 ? 265 : 254;
-      } else {
-        mastSection = radius <= 700 ? 'B-200 Fabricated Battened Mast (200 mm)' : 'B-175 Fabricated Battened Mast (175 mm)';
-        mastSeries = radius <= 700 ? 'B-Series Fabricated Battened Mast (B-200)' : 'B-Series Fabricated Battened Mast (B-175)';
-        fbmCode = radius <= 700 ? 173 : 161;
-      }
-    } else {
-      // Inside Curve
-      if (isBwa) {
-        mastSection = 'B-225 Heavy Fabricated Battened Mast (225 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-225)';
-        fbmCode = radius <= 700 ? 374 : 363;
-      } else if (role === 'N/NACC') {
-        mastSection = 'B-175 Fabricated Battened Mast (175 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-175)';
-        fbmCode = radius <= 700 ? 147 : 135;
-      } else if (role === 'ACC') {
-        mastSection = 'B-175 Fabricated Battened Mast (175 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-175)';
-        fbmCode = radius <= 700 ? 154 : 147;
-      } else if (role === 'ACA') {
-        mastSection = 'B-175 Fabricated Battened Mast (175 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-175)';
-        fbmCode = radius <= 700 ? 254 : 245;
-      } else {
-        mastSection = 'B-175 Fabricated Battened Mast (175 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-175)';
-        fbmCode = radius <= 700 ? 161 : 154;
-      }
-    }
-  } else if (wind === 136) {
-    // ------------------------------------------------------------------------
-    // WIND 136 kgf/m² (SHEETS 7-9) - RDSO 44 m/s HEAVY ZONE
-    // ------------------------------------------------------------------------
-    if (alignment === 'tangent') {
-      if (role === 'N/NACC') {
-        mastSection = 'B-175 Fabricated Battened Mast (175 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-175)';
-        fbmCode = 154;
-      } else if (role === 'ACC') {
-        mastSection = 'B-175 Fabricated Battened Mast (175 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-175)';
-        fbmCode = 161;
-      } else if (role === 'ACA') {
-        mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-        fbmCode = 265;
-      } else if (role === 'OLC' || role === 'OLI') {
-        mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-        fbmCode = 168;
-      } else if (isBwa) {
-        mastSection = 'B-225 Heavy Fabricated Battened Mast (225 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-225)';
-        fbmCode = 389;
-      }
-    } else if (isOutside) {
-      if (isBwa) {
-        mastSection = 'B-225 Heavy Fabricated Battened Mast (225 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-225)';
-        fbmCode = radius <= 700 ? 395 : 389;
-      } else if (role === 'N/NACC') {
-        mastSection = radius <= 700 ? 'B-200 Fabricated Battened Mast (200 mm)' : 'B-175 Fabricated Battened Mast (175 mm)';
-        mastSeries = radius <= 700 ? 'B-Series Fabricated Battened Mast (B-200)' : 'B-Series Fabricated Battened Mast (B-175)';
-        fbmCode = radius <= 700 ? 168 : 154;
-      } else if (role === 'ACC') {
-        mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-        fbmCode = radius <= 700 ? 173 : 161;
-      } else if (role === 'ACA') {
-        mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-        fbmCode = radius <= 700 ? 275 : 265;
-      } else {
-        mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-        fbmCode = radius <= 700 ? 185 : 168;
-      }
-    } else {
-      // Inside Curve
-      if (isBwa) {
-        mastSection = 'B-225 Heavy Fabricated Battened Mast (225 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-225)';
-        fbmCode = radius <= 700 ? 389 : 374;
-      } else if (role === 'N/NACC') {
-        mastSection = 'B-175 Fabricated Battened Mast (175 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-175)';
-        fbmCode = radius <= 700 ? 161 : 147;
-      } else if (role === 'ACC') {
-        mastSection = radius <= 700 ? 'B-200 Fabricated Battened Mast (200 mm)' : 'B-175 Fabricated Battened Mast (175 mm)';
-        mastSeries = radius <= 700 ? 'B-Series Fabricated Battened Mast (B-200)' : 'B-Series Fabricated Battened Mast (B-175)';
-        fbmCode = radius <= 700 ? 168 : 154;
-      } else if (role === 'ACA') {
-        mastSection = radius <= 700 ? 'B-200 Fabricated Battened Mast (200 mm)' : 'B-175 Fabricated Battened Mast (175 mm)';
-        mastSeries = radius <= 700 ? 'B-Series Fabricated Battened Mast (B-200)' : 'B-Series Fabricated Battened Mast (B-175)';
-        fbmCode = radius <= 700 ? 265 : 254;
-      } else {
-        mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-        fbmCode = radius <= 700 ? 173 : 161;
-      }
-    }
-  } else if (wind === 155) {
-    // ------------------------------------------------------------------------
-    // WIND 155 kgf/m² (SHEETS 10-12) - RDSO 47 m/s HEAVY II ZONE
-    // ------------------------------------------------------------------------
-    if (alignment === 'tangent') {
-      if (role === 'N/NACC') {
-        mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-        fbmCode = 161;
-      } else if (role === 'ACC') {
-        mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-        fbmCode = 168;
-      } else if (role === 'ACA') {
-        mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-        fbmCode = 270;
-      } else if (role === 'OLC' || role === 'OLI') {
-        mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-        fbmCode = 178;
-      } else if (isBwa) {
-        mastSection = 'B-225 Heavy Fabricated Battened Mast (225 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-225)';
-        fbmCode = 389;
-      }
-    } else if (isOutside) {
-      if (isBwa) {
-        mastSection = radius <= 700 ? 'B-250 Heavy Fabricated Battened Mast (250 mm)' : 'B-225 Heavy Fabricated Battened Mast (225 mm)';
-        mastSeries = radius <= 700 ? 'B-Series Fabricated Battened Mast (B-250)' : 'B-Series Fabricated Battened Mast (B-225)';
-        fbmCode = radius <= 700 ? 399 : 389;
-      } else if (role === 'N/NACC') {
-        mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-        fbmCode = radius <= 700 ? 173 : 161;
-      } else if (role === 'ACC') {
-        mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-        fbmCode = radius <= 700 ? 178 : 168;
-      } else if (role === 'ACA') {
-        mastSection = radius <= 700 ? 'B-225 Heavy Fabricated Battened Mast (225 mm)' : 'B-200 Fabricated Battened Mast (200 mm)';
-        mastSeries = radius <= 700 ? 'B-Series Fabricated Battened Mast (B-225)' : 'B-Series Fabricated Battened Mast (B-200)';
-        fbmCode = radius <= 700 ? 275 : 270;
-      } else {
-        mastSection = radius <= 700 ? 'B-225 Heavy Fabricated Battened Mast (225 mm)' : 'B-200 Fabricated Battened Mast (200 mm)';
-        mastSeries = radius <= 700 ? 'B-Series Fabricated Battened Mast (B-225)' : 'B-Series Fabricated Battened Mast (B-200)';
-        fbmCode = radius <= 700 ? 193 : 178;
-      }
-    } else {
-      // Inside Curve
-      if (isBwa) {
-        mastSection = 'B-225 Heavy Fabricated Battened Mast (225 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-225)';
-        fbmCode = radius <= 700 ? 395 : 389;
-      } else if (role === 'N/NACC') {
-        mastSection = radius <= 700 ? 'B-200 Fabricated Battened Mast (200 mm)' : 'B-175 Fabricated Battened Mast (175 mm)';
-        mastSeries = radius <= 700 ? 'B-Series Fabricated Battened Mast (B-200)' : 'B-Series Fabricated Battened Mast (B-175)';
-        fbmCode = radius <= 700 ? 168 : 154;
-      } else if (role === 'ACC') {
-        mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-        fbmCode = radius <= 700 ? 173 : 161;
-      } else if (role === 'ACA') {
-        mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-        fbmCode = radius <= 700 ? 270 : 260;
-      } else {
-        mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-        fbmCode = radius <= 700 ? 185 : 168;
+        baseMast = 'B-225';
+        baseCode = 199;
       }
     }
   } else {
     // ------------------------------------------------------------------------
-    // WIND 216 kgf/m² (SHEETS 16-18) - RDSO 55 m/s SEVERE II ZONE
+    // MAST ON INSIDE OF CURVED TRACK (RDSO BOTTOM TABLE)
     // ------------------------------------------------------------------------
-    if (alignment === 'tangent') {
-      if (role === 'N/NACC') {
-        mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-        fbmCode = 178;
-      } else if (role === 'ACC') {
-        mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-        fbmCode = 185;
-      } else if (role === 'ACA') {
-        mastSection = 'B-225 Heavy Fabricated Battened Mast (225 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-225)';
-        fbmCode = 275;
-      } else if (role === 'OLC' || role === 'OLI') {
-        mastSection = 'B-225 Heavy Fabricated Battened Mast (225 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-225)';
-        fbmCode = 193;
-      } else if (isBwa) {
-        mastSection = 'B-250 Heavy Fabricated Battened Mast (250 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-250)';
-        fbmCode = 399;
-      }
-    } else if (isOutside) {
+    const isMild = radius >= 1600;
+    const isMed = radius >= 700 && radius < 1600;
+    const isSharp = radius >= 400 && radius < 700;
+    const isExtraSharp = radius < 400;
+
+    if (wind === 73) {
       if (isBwa) {
-        mastSection = 'B-250 Heavy Fabricated Battened Mast (250 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-250)';
-        fbmCode = 399;
+        baseMast = isExtraSharp ? 'B-225' : 'B-200';
+        baseCode = isExtraSharp ? 374 : isMild ? 355 : 363;
       } else if (role === 'N/NACC') {
-        mastSection = radius <= 700 ? 'B-225 Heavy Fabricated Battened Mast (225 mm)' : 'B-200 Fabricated Battened Mast (200 mm)';
-        mastSeries = radius <= 700 ? 'B-Series Fabricated Battened Mast (B-225)' : 'B-Series Fabricated Battened Mast (B-200)';
-        fbmCode = radius <= 700 ? 193 : 178;
+        baseMast = 'B-175';
+        baseCode = isExtraSharp ? 147 : isMild ? 135 : 140;
       } else if (role === 'ACC') {
-        mastSection = radius <= 700 ? 'B-225 Heavy Fabricated Battened Mast (225 mm)' : 'B-200 Fabricated Battened Mast (200 mm)';
-        mastSeries = radius <= 700 ? 'B-Series Fabricated Battened Mast (B-225)' : 'B-Series Fabricated Battened Mast (B-200)';
-        fbmCode = radius <= 700 ? 199 : 185;
+        baseMast = 'B-175';
+        baseCode = isExtraSharp ? 154 : isSharp ? 147 : 140;
       } else if (role === 'ACA') {
-        mastSection = radius <= 700 ? 'B-250 Heavy Fabricated Battened Mast (250 mm)' : 'B-225 Heavy Fabricated Battened Mast (225 mm)';
-        mastSeries = radius <= 700 ? 'B-Series Fabricated Battened Mast (B-250)' : 'B-Series Fabricated Battened Mast (B-225)';
-        fbmCode = 275;
+        baseMast = 'B-175';
+        baseCode = isExtraSharp ? 254 : isMild ? 250 : 254;
       } else {
-        mastSection = radius <= 700 ? 'B-250 Heavy Fabricated Battened Mast (250 mm)' : 'B-225 Heavy Fabricated Battened Mast (225 mm)';
-        mastSeries = radius <= 700 ? 'B-Series Fabricated Battened Mast (B-250)' : 'B-Series Fabricated Battened Mast (B-225)';
-        fbmCode = radius <= 700 ? 199 : 193;
+        baseMast = 'B-175';
+        baseCode = isExtraSharp ? 154 : isSharp ? 147 : 140;
+      }
+    } else if (wind === 105) {
+      if (implantationTier === 'Tier 2') {
+        // Sheet 5 Inside Curve
+        if (isBwa) {
+          baseMast = isExtraSharp ? 'B-225' : 'B-200';
+          baseCode = isExtraSharp ? 389 : 374;
+        } else if (role === 'N/NACC') {
+          baseMast = 'B-175';
+          baseCode = isExtraSharp ? 161 : 154;
+        } else if (role === 'ACC') {
+          baseMast = 'B-175';
+          baseCode = isExtraSharp ? 265 : isSharp ? 260 : 254;
+        } else if (role === 'ACA') {
+          baseMast = 'B-175';
+          baseCode = 168;
+        } else {
+          baseMast = 'B-175';
+          baseCode = 168;
+        }
+      } else {
+        if (isBwa) {
+          baseMast = isExtraSharp ? 'B-225' : 'B-200';
+          baseCode = isExtraSharp ? 389 : 374;
+        } else if (role === 'N/NACC') {
+          baseMast = 'B-175';
+          baseCode = isExtraSharp ? 161 : isMild ? 140 : 147;
+        } else if (role === 'ACC') {
+          baseMast = 'B-175';
+          baseCode = isExtraSharp ? 265 : isSharp ? 260 : 254;
+        } else if (role === 'ACA') {
+          baseMast = 'B-175';
+          baseCode = isExtraSharp ? 265 : isMild ? 254 : 260;
+        } else {
+          baseMast = 'B-175';
+          baseCode = isExtraSharp ? 161 : 154;
+        }
+      }
+    } else if (wind === 136) {
+      if (isBwa) {
+        baseMast = isExtraSharp ? 'B-225' : 'B-200';
+        baseCode = isExtraSharp ? 389 : 374;
+      } else if (role === 'N/NACC') {
+        baseMast = 'B-175';
+        baseCode = isExtraSharp ? 161 : isMild ? 147 : 154;
+      } else if (role === 'ACC') {
+        baseMast = isExtraSharp ? 'B-200' : 'B-175';
+        baseCode = isExtraSharp ? 173 : isMild ? 161 : 168;
+      } else if (role === 'ACA') {
+        baseMast = isExtraSharp ? 'B-200' : 'B-175';
+        baseCode = isExtraSharp ? 270 : isMild ? 260 : 265;
+      } else {
+        baseMast = isExtraSharp ? 'B-200' : 'B-175';
+        baseCode = isExtraSharp ? 173 : isMild ? 161 : 168;
+      }
+    } else if (wind === 155) {
+      if (isBwa) {
+        baseMast = isExtraSharp ? 'B-225' : 'B-200';
+        baseCode = isExtraSharp ? 395 : isMild ? 374 : 389;
+      } else if (role === 'N/NACC') {
+        baseMast = 'B-175';
+        baseCode = isExtraSharp ? 168 : isMild ? 154 : 161;
+      } else if (role === 'ACC') {
+        baseMast = isExtraSharp ? 'B-200' : 'B-175';
+        baseCode = isExtraSharp ? 173 : isMild ? 161 : 168;
+      } else if (role === 'ACA') {
+        baseMast = isExtraSharp ? 'B-200' : 'B-175';
+        baseCode = isExtraSharp ? 270 : isMild ? 260 : 265;
+      } else {
+        baseMast = 'B-200';
+        baseCode = isExtraSharp ? 185 : isMild ? 178 : 185;
+      }
+    } else if (wind === 178) {
+      if (isBwa) {
+        baseMast = 'B-225';
+        baseCode = isExtraSharp ? 399 : isSharp ? 395 : 389;
+      } else if (role === 'N/NACC') {
+        baseMast = isSharp || isExtraSharp ? 'B-200' : 'B-175';
+        baseCode = isExtraSharp ? 173 : isSharp ? 168 : 161;
+      } else if (role === 'ACC') {
+        baseMast = 'B-200';
+        baseCode = isExtraSharp ? 185 : isSharp ? 173 : 168;
+      } else if (role === 'ACA') {
+        baseMast = 'B-200';
+        baseCode = isExtraSharp ? 275 : isSharp ? 270 : 265;
+      } else {
+        baseMast = 'B-200';
+        baseCode = 185;
       }
     } else {
-      // Inside Curve
+      // Wind 216
       if (isBwa) {
-        mastSection = 'B-250 Heavy Fabricated Battened Mast (250 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-250)';
-        fbmCode = radius <= 700 ? 399 : 395;
+        baseMast = 'B-225';
+        baseCode = 399;
       } else if (role === 'N/NACC') {
-        mastSection = 'B-200 Fabricated Battened Mast (200 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-200)';
-        fbmCode = radius <= 700 ? 178 : 168;
+        baseMast = 'B-200';
+        baseCode = isSharp || isExtraSharp ? 178 : 173;
       } else if (role === 'ACC') {
-        mastSection = radius <= 700 ? 'B-225 Heavy Fabricated Battened Mast (225 mm)' : 'B-200 Fabricated Battened Mast (200 mm)';
-        mastSeries = radius <= 700 ? 'B-Series Fabricated Battened Mast (B-225)' : 'B-Series Fabricated Battened Mast (B-200)';
-        fbmCode = radius <= 700 ? 185 : 178;
+        baseMast = isSharp || isExtraSharp ? 'B-225' : 'B-200';
+        baseCode = isSharp || isExtraSharp ? 185 : 178;
       } else if (role === 'ACA') {
-        mastSection = radius <= 700 ? 'B-225 Heavy Fabricated Battened Mast (225 mm)' : 'B-200 Fabricated Battened Mast (200 mm)';
-        mastSeries = radius <= 700 ? 'B-Series Fabricated Battened Mast (B-225)' : 'B-Series Fabricated Battened Mast (B-200)';
-        fbmCode = radius <= 700 ? 275 : 270;
+        baseMast = isSharp || isExtraSharp ? 'B-225' : 'B-200';
+        baseCode = isSharp || isExtraSharp ? 275 : 270;
       } else {
-        mastSection = 'B-225 Heavy Fabricated Battened Mast (225 mm)';
-        mastSeries = 'B-Series Fabricated Battened Mast (B-225)';
-        fbmCode = radius <= 700 ? 199 : 185;
+        baseMast = 'B-225';
+        baseCode = isExtraSharp ? 199 : 193;
       }
     }
   }
 
-  // 3. USER MAST PREFERENCE OVERRIDE (Only B-Series: B-150, B-175, B-200, B-225, B-250)
+  // 3. USER MAST PREFERENCE COLUMN RESOLUTION (Only B-Series: B-150, B-175, B-200, B-225, B-250)
+  let fbmCode = baseCode;
+  let chosenMast = baseMast;
+
   if (mastPreference && mastPreference !== 'auto') {
-    const pref = mastPreference;
-    const widthMap: Record<string, number> = {
-      'B-150': 150,
-      'B-175': 175,
-      'B-200': 200,
-      'B-225': 225,
-      'B-250': 250,
-    };
-    const w = widthMap[pref] ?? 200;
-    mastSection = `${pref} ${w >= 225 ? 'Heavy ' : ''}Fabricated Battened Mast (${w} mm)`;
-    mastSeries = `B-Series Fabricated Battened Mast (${pref})`;
+    chosenMast = mastPreference;
+    const order = ['B-150', 'B-175', 'B-200', 'B-225', 'B-250'];
+    const baseIdx = order.indexOf(baseMast);
+    const prefIdx = order.indexOf(mastPreference);
+
+    if (baseIdx !== -1 && prefIdx !== -1 && baseIdx !== prefIdx) {
+      const diff = prefIdx - baseIdx;
+      if (isBwa) {
+        const bwaCodes = [347, 355, 363, 374, 389, 395, 399];
+        const curIdx = bwaCodes.indexOf(baseCode);
+        if (curIdx !== -1) {
+          const nextIdx = Math.max(0, Math.min(bwaCodes.length - 1, curIdx + diff));
+          fbmCode = bwaCodes[nextIdx] ?? baseCode;
+        }
+      } else if (role === 'ACA') {
+        const acaCodes = [234, 245, 254, 260, 265, 270, 275];
+        const curIdx = acaCodes.indexOf(baseCode);
+        if (curIdx !== -1) {
+          const nextIdx = Math.max(0, Math.min(acaCodes.length - 1, curIdx + diff));
+          fbmCode = acaCodes[nextIdx] ?? baseCode;
+        }
+      } else {
+        const normCodes = [135, 140, 147, 154, 161, 168, 173, 178, 185, 193, 199];
+        const curIdx = normCodes.indexOf(baseCode);
+        if (curIdx !== -1) {
+          const nextIdx = Math.max(0, Math.min(normCodes.length - 1, curIdx + diff));
+          fbmCode = normCodes[nextIdx] ?? baseCode;
+        }
+      }
+    }
   }
 
-  // 4. IMPLANTATION TIER 3 LEVERAGE ADJUSTMENT (> 3.80 m up to 5.00 m)
-  // Large cantilever bracket arm increases transverse base bending moment
-  if (implantationTier === 'Tier 3' && fbmCode < 389 && !isBwa) {
-    if (fbmCode === 135) fbmCode = 140;
-    else if (fbmCode === 140) fbmCode = 147;
-    else if (fbmCode === 147) fbmCode = 154;
-    else if (fbmCode === 154) fbmCode = 161;
-    else if (fbmCode === 161) fbmCode = 168;
-    else if (fbmCode === 168) fbmCode = 173;
-    else if (fbmCode === 173) fbmCode = 178;
-    else if (fbmCode === 178) fbmCode = 185;
-  }
+  const w = parseInt(chosenMast.replace('B-', ''), 10) || 200;
+  const mastSection = `${chosenMast} ${w >= 225 ? 'Heavy ' : ''}Fabricated Battened Mast (${w} mm)`;
+  const mastSeries = `B-Series Fabricated Battened Mast (${chosenMast})`;
 
   return {
     mastSection,
